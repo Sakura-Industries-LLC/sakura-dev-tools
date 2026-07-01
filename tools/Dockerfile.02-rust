@@ -1,0 +1,12 @@
+FROM sakura-dev-tools:01-proto
+
+ENV CARGO_HOME=/root/.cargo
+ENV RUSTUP_HOME=/root/.rustup
+ENV PATH="$CARGO_HOME/bin:$PATH"
+
+ARG NEXTEST_VERSION
+
+# install nightly rustfmt -- Because proto cant do that
+RUN rustup toolchain install nightly --profile minimal -c rustfmt \
+    && cargo binstall cargo-nextest --version ${NEXTEST_VERSION} --secure --no-confirm \
+    && rm -rf /root/.cargo/registry /root/.cargo/git /root/.rustup/downloads /root/.rustup/tmp

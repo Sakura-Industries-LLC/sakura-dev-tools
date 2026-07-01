@@ -1,0 +1,13 @@
+proto = "0.58.1"
+moon = "2.3.5"
+rumdl = "0.2.27"
+node = "26.4.0"
+npm = "11.18.0"
+rust = "1.96.1"
+"npm:cspell" = "10.0.1"
+"npm:tree-sitter-cli" = "0.26.10"
+"cargo:cargo-binstall" = "1.20.1"
+"cargo:cargo-deny" = "0.19.9"
+
+[plugins.tools]
+rumdl = "file://.proto/plugins/rumdl.toml"

@@ -1,0 +1,86 @@
+tasks:
+  fix:
+    deps:
+      - "root:markdown-fix"
+      - "root:test-rustfmt"
+    options:
+      runInCI: false
+
+  test-rustfmt:
+    command: "rustfmt"
+    args:
+      - "+nightly"
+      - "--version"
+
+  ci:
+    deps:
+      - "root:markdown-check"
+      - "root:spell-check"
+    options:
+      runInCI: true
+
+  markdown-check:
+    command: "rumdl"
+    args:
+      - "check"
+      - "."
+    options:
+      runInCI: true
+      outputStyle: "stream"
+    inputs:
+      - "**/*.md"
+      - "**/*.mdx"
+      - "**/*.markdown"
+      - "!**/node_modules/**"
+
+  spell-check:
+    command: "cspell"
+    args:
+      - "lint"
+      - "--config"
+      - "cspell.json"
+      - "--no-progress"
+      - "."
+    options:
+      runInCI: true
+      outputStyle: "stream"
+    inputs:
+      - "**/*.c"
+      - "**/*.cddl"
+      - "**/*.h"
+      - "**/*.js"
+      - "**/*.json"
+      - "**/*.md"
+      - "**/*.markdown"
+      - "**/*.mdx"
+      - "**/*.rs"
+      - "**/*.scm"
+      - "**/*.sh"
+      - "**/*.toml"
+      - "**/*.yaml"
+      - "**/*.yml"
+      - "!**/node_modules/**"
+      - "cspell.json"
+      - ".config/dictionaries/project.dic"
+
+  markdown-fix:
+    command: "rumdl"
+    args:
+      - "check"
+      - "--fix"
+      - "."
+    options:
+      runInCI: false
+    inputs:
+      - "**/*.md"
+      - "**/*.mdx"
+      - "**/*.markdown"
+      - "!**/node_modules/**"
+
+  docker-cache-dir:
+    command: "mkdir"
+    args:
+      - "-p"
+      - ".moon/docker-cache"
+    options:
+      runInCI: false

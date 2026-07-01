@@ -1,0 +1,6 @@
+FROM sakura-dev-tools:02-rust
+
+RUN mkdir /repo
+RUN env
+
+WORKDIR /repo
