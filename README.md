@@ -1,8 +1,9 @@
 # sakura-dev-tools
 
 A single, maintainable build-tool container image used across Sakura Industries projects.
-The image layers a Debian base, the `proto` toolchain manager,
-and a Rust nightly toolchain into one reproducible environment that downstream projects can mount as their build runner.
+The image layers a Debian base, the `proto` toolchain manager, a Rust nightly toolchain, and a Go tooling layer
+(with the `check_go_licenses.py` license validator)
+into one reproducible environment that downstream projects can mount as their build runner.
 
 ## Layout
 
@@ -12,6 +13,9 @@ Everything that ends up inside the final image lives under `tools/`; everything 
 * `tools/Dockerfile.00-base-os` - Debian base layer with native build dependencies.
 * `tools/Dockerfile.01-proto` - installs `proto` and every tool pinned in `.prototools`.
 * `tools/Dockerfile.02-rust` - adds a nightly Rust toolchain (for `rustfmt`) and `cargo-nextest`.
+* `tools/Dockerfile.03-go` - Go tooling layer:
+  copies `go/check_go_licenses.py` into `/root/go` so it is on `PATH` for downstream Go projects.
+  `cyclonedx-gomod` itself is installed at the proto layer via `.prototools`.
 * `tools/Dockerfile.zz-tools` - the final `sakura-dev-tools:latest` image, with `/repo` as the working directory.
 * `tools/outdated.py` - reports which pinned versions in `.env` and `.prototools` have newer upstream releases;
   supports `--update` to refresh them.
@@ -31,6 +35,7 @@ Each layer names a stage in a fixed order, and the final `zz-tools` image is wha
 | `00-`  | OS / native build dependencies (Debian).                                               |
 | `01-`  | `proto` toolchain manager and everything pinned in `.prototools`.                     |
 | `02-`  | Toolchains that `proto` cannot install (currently the nightly Rust toolchain).        |
+| `03-`  | Go tooling layer: ships `check_go_licenses.py`.                                       |
 | `zz-`  | Final aggregated image, with `/repo` prepared for downstream mounts.                  |
 
 `just build-setup` walks the layers in lexicographic order.
