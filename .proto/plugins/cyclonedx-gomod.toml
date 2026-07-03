@@ -1,0 +1,28 @@
+name = "cyclonedx-gomod"
+type = "cli"
+
+[platform.linux]
+download-file = "cyclonedx-gomod_{version}_linux_{arch}.tar.gz"
+checksum-file = "cyclonedx-gomod_{version}_checksums.txt"
+exe-path = "cyclonedx-gomod"
+
+[platform.macos]
+download-file = "cyclonedx-gomod_{version}_darwin_{arch}.tar.gz"
+checksum-file = "cyclonedx-gomod_{version}_checksums.txt"
+exe-path = "cyclonedx-gomod"
+
+[platform.windows]
+download-file = "cyclonedx-gomod_{version}_windows_{arch}.zip"
+checksum-file = "cyclonedx-gomod_{version}_checksums.txt"
+exe-path = "cyclonedx-gomod.exe"
+
+[install]
+download-url = "https://github.com/CycloneDX/cyclonedx-gomod/releases/download/v{version}/{download_file}"
+checksum-url = "https://github.com/CycloneDX/cyclonedx-gomod/releases/download/v{version}/{checksum_file}"
+
+[install.arch]
+aarch64 = "arm64"
+x86_64 = "amd64"
+
+[resolve]
+git-url = "https://github.com/CycloneDX/cyclonedx-gomod"

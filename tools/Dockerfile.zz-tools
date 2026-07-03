@@ -1,4 +1,4 @@
-FROM sakura-dev-tools:02-rust
+FROM sakura-dev-tools:03-go
 
 RUN mkdir /repo
 RUN env

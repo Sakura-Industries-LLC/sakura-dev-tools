@@ -1,0 +1,6 @@
+FROM sakura-dev-tools:02-rust
+
+ENV GOBIN=/root/.proto/bin
+ENV PATH="/root/go:$PATH"
+
+COPY go/ /root/go

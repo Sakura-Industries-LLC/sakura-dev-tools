@@ -27,6 +27,7 @@ build-setup:
         --build-arg PROTO_VERSION .
     docker build -f tools/Dockerfile.02-rust -t sakura-dev-tools:02-rust \
         --build-arg NEXTEST_VERSION .
+    docker build -f tools/Dockerfile.03-go -t sakura-dev-tools:03-go .
     docker build -f tools/Dockerfile.zz-tools -t sakura-dev-tools:latest .
 
 # Make sure cache-dirs exist
