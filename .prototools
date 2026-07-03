@@ -11,7 +11,13 @@ zig = "0.15.2"
 "npm:tree-sitter-cli" = "0.26.10"
 "cargo:cargo-binstall" = "1.20.1"
 "cargo:cargo-deny" = "0.19.9"
+"ruff"= "0.15.20"
+"uv"= "0.11.26"
+"ty"= "0.0.56"
 
 [plugins.tools]
 rumdl = "file://.proto/plugins/rumdl.toml"
 zig = "file://.proto/plugins/zig.toml"
+ruff = "file://.proto/plugins/ruff.toml"
+uv = "file://.proto/plugins/uv.toml"
+ty = "file://.proto/plugins/ty.toml"

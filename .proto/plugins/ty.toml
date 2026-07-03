@@ -1,0 +1,35 @@
+# A TOML plugin for ty:
+# https://moonrepo.dev/docs/proto/plugins#toml-plugin
+
+name = "ty"
+type = "cli"
+
+[platform.linux]
+archive-prefix = "ty-{arch}-unknown-linux-gnu"
+exe-path = "ty"
+download-file = "ty-{arch}-unknown-linux-gnu.tar.gz"
+
+[platform.macos]
+archive-prefix = "ty-{arch}-apple-darwin"
+exe-path = "ty"
+download-file = "ty-{arch}-apple-darwin.tar.gz"
+
+[platform.windows]
+archs = ["x86_64", "aarch64", "x86"]
+exe-path = "ty.exe"
+download-file = "ty-{arch}-pc-windows-msvc.zip"
+
+[install]
+download-url = "https://github.com/astral-sh/ty/releases/download/{version}/{download_file}"
+
+[install.arch]
+aarch64 = "aarch64"
+x86_64 = "x86_64"
+x86 = "i686"
+
+[install.exes.ty]
+exe-path = "ty"
+primary = true
+
+[resolve]
+git-url = "https://github.com/astral-sh/ty"

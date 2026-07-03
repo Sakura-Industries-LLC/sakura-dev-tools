@@ -13,5 +13,6 @@ ENV MOON_TOOLCHAIN_FORCE_GLOBALS=true
 RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/moonrepo/proto/releases/download/v${PROTO_VERSION}/proto_cli-installer.sh | sh \
     && bash -o pipefail -c \
         'proto install 2>&1 | sed -u -E "/^\[[^]]+\] Waiting on requirements:/d"' \
+    && ln -sf /toolchain/.prototools /root/.proto/.prototools \
     && npm config set prefix /root/.proto \
     && rm -rf /root/.proto/cache /root/.proto/temp

@@ -1,0 +1,27 @@
+name = "Ruff"
+type = "cli"
+
+[resolve]
+git-url = "https://github.com/astral-sh/ruff"
+
+[platform.linux]
+exe-path = "ruff-{arch}-unknown-linux-{libc}/ruff"
+download-file = "ruff-{arch}-unknown-linux-{libc}.tar.gz"
+checksum-file = "ruff-{arch}-unknown-linux-{libc}.tar.gz.sha256"
+
+[platform.macos]
+exe-path = "ruff-{arch}-apple-darwin/ruff"
+download-file = "ruff-{arch}-apple-darwin.tar.gz"
+checksum-file = "ruff-{arch}-apple-darwin.tar.gz.sha256"
+
+[platform.windows]
+exe-path = "ruff-{arch}-pc-windows-msvc/ruff.exe"
+download-file = "ruff-{arch}-pc-windows-msvc.zip"
+checksum-file = "ruff-{arch}-pc-windows-msvc.zip.sha256"
+
+[install]
+download-url = "https://github.com/astral-sh/ruff/releases/download/{version}/{download_file}"
+checksum-url = "https://github.com/astral-sh/ruff/releases/download/{version}/{checksum_file}"
+
+[install.arch]
+x86 = "i686"
