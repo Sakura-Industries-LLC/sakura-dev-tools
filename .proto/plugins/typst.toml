@@ -1,0 +1,27 @@
+name = "typst"
+type = "cli"
+
+[platform.linux]
+archive-prefix = "typst-{arch}-unknown-linux-musl"
+download-file = "typst-{arch}-unknown-linux-musl.tar.xz"
+exe-path = "typst"
+
+[platform.macos]
+archive-prefix = "typst-{arch}-apple-darwin"
+download-file = "typst-{arch}-apple-darwin.tar.xz"
+exe-path = "typst"
+
+[platform.windows]
+archive-prefix = "typst-{arch}-pc-windows-msvc"
+download-file = "typst-{arch}-pc-windows-msvc.zip"
+exe-path = "typst.exe"
+
+[install]
+download-url = "https://github.com/typst/typst/releases/download/v{version}/{download_file}"
+
+[install.arch]
+aarch64 = "aarch64"
+x86_64 = "x86_64"
+
+[resolve]
+git-url = "https://github.com/typst/typst"

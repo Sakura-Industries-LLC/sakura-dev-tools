@@ -4,9 +4,13 @@ dpkg
 dotenv
 fatalf
 fontconfig
+fontforge
 gobin
 gomod
+gsize
+htmlex
 ifdef
+ldconfig
 libbluetooth
 libbz
 libc
@@ -27,6 +31,7 @@ netbase
 nextest
 noto
 pipefail
+poppler
 prototools
 roboto
 rumdl

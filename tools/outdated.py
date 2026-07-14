@@ -111,7 +111,7 @@ def main() -> int:
 
 def run_proto_outdated(*, update: bool, cwd: Path) -> int:
     """Run proto's own outdated workflow, preserving interactivity."""
-    command = ["proto", "outdated"]
+    command = ["proto", "outdated", "--reporter", "text"]
     if update:
         command.append("--update")
     return subprocess.run(command, cwd=cwd, check=False).returncode

@@ -1,0 +1,30 @@
+name = "quarto"
+type = "cli"
+
+[platform.linux]
+archive-prefix = "quarto-{version}"
+download-file = "quarto-{version}-linux-{arch}.tar.gz"
+checksum-file = "quarto-{version}-checksums.txt"
+exe-path = "bin/quarto"
+
+[platform.macos]
+archive-prefix = "quarto-{version}"
+download-file = "quarto-{version}-macos.tar.gz"
+checksum-file = "quarto-{version}-checksums.txt"
+exe-path = "bin/quarto"
+
+[platform.windows]
+download-file = "quarto-{version}-win.zip"
+checksum-file = "quarto-{version}-checksums.txt"
+exe-path = "bin/quarto.exe"
+
+[install]
+download-url = "https://github.com/quarto-dev/quarto-cli/releases/download/v{version}/{download_file}"
+checksum-url = "https://github.com/quarto-dev/quarto-cli/releases/download/v{version}/{checksum_file}"
+
+[install.arch]
+aarch64 = "arm64"
+x86_64 = "amd64"
+
+[resolve]
+git-url = "https://github.com/quarto-dev/quarto-cli"

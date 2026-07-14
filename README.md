@@ -16,6 +16,8 @@ Everything that ends up inside the final image lives under `tools/`; everything 
 * `tools/Dockerfile.03-go` - Go tooling layer:
   copies `go/check_go_licenses.py` into `/root/go` so it is on `PATH` for downstream Go projects.
   `cyclonedx-gomod` itself is installed at the proto layer via `.prototools`.
+* `tools/Dockerfile.04-pdf2htmlex-builder` - builds pdf2htmlEX and its runtime dependencies.
+* `tools/Dockerfile.05-pdf2htmlex` - copies the pdf2htmlEX runtime artifacts without build dependencies.
 * `tools/Dockerfile.zz-tools` - the final `sakura-dev-tools:latest` image, with `/repo` as the working directory.
 * `tools/outdated.py` - reports which pinned versions in `.env` and `.prototools` have newer upstream releases;
   supports `--update` to refresh them.
@@ -36,6 +38,8 @@ Each layer names a stage in a fixed order, and the final `zz-tools` image is wha
 | `01-`  | `proto` toolchain manager and everything pinned in `.prototools`.                     |
 | `02-`  | Toolchains that `proto` cannot install (currently the nightly Rust toolchain).        |
 | `03-`  | Go tooling layer: ships `check_go_licenses.py`.                                       |
+| `04-`  | Disposable pdf2htmlEX builder layer.                                                  |
+| `05-`  | Clean pdf2htmlEX runtime layer.                                                       |
 | `zz-`  | Final aggregated image, with `/repo` prepared for downstream mounts.                  |
 
 `just build-setup` walks the layers in lexicographic order.

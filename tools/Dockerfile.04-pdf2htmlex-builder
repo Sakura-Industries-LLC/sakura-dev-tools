@@ -1,0 +1,42 @@
+FROM sakura-dev-tools:03-go
+
+ARG PDF2HTMLEX_COMMIT
+
+WORKDIR /build
+
+RUN apt-get update; \
+    apt-get install -y --no-install-recommends sudo; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*
+
+RUN set -eux; \
+    git clone --depth 1 --no-checkout \
+        https://github.com/pdf2htmlEX/pdf2htmlEX.git \
+        pdf2htmlEX; \
+    git -C pdf2htmlEX fetch --depth 1 origin "${PDF2HTMLEX_COMMIT}"; \
+    git -C pdf2htmlEX checkout --detach "${PDF2HTMLEX_COMMIT}"
+
+WORKDIR /build/pdf2htmlEX
+
+RUN set -eux; \
+    sed -i 's/openjdk-8-jre-headless/default-jre-headless/' \
+        buildScripts/getBuildToolsApt; \
+    sed -i '/^cd poppler$/a\sed -i "s/static volatile gsize/static gsize/" glib/poppler-private.h' \
+        buildScripts/buildPoppler; \
+    sed -i '/^cd fontforge$/a\sed -i "/^add_subdirectory(po)$/d" CMakeLists.txt' \
+        buildScripts/buildFontforge; \
+    sed -i '/^find_package(PkgConfig)$/a\pkg_check_modules(GLIB REQUIRED glib-2.0 gio-2.0)\ninclude_directories(${GLIB_INCLUDE_DIRS})' \
+        pdf2htmlEX/CMakeLists.txt; \
+    ./buildScripts/buildInstallLocallyApt
+
+RUN set -eux; \
+    mkdir -p /artifacts/bin /artifacts/lib /artifacts/share; \
+    cp -a /usr/local/bin/pdf2htmlEX /artifacts/bin/; \
+    for share_dir in pdf2htmlEX fontforge poppler; do \
+        if [ -d "/usr/local/share/${share_dir}" ]; then \
+            cp -a "/usr/local/share/${share_dir}" /artifacts/share/; \
+        fi; \
+    done; \
+    find /usr/local/lib -maxdepth 1 \
+        \( -type f -o -type l \) -name '*.so*' \
+        -exec cp -a -t /artifacts/lib {} +

@@ -1,0 +1,13 @@
+FROM sakura-dev-tools:03-go
+
+COPY --from=sakura-dev-tools:04-pdf2htmlex-builder \
+    /artifacts/bin/pdf2htmlEX \
+    /usr/local/bin/pdf2htmlEX
+COPY --from=sakura-dev-tools:04-pdf2htmlex-builder \
+    /artifacts/lib/ \
+    /usr/local/lib/
+COPY --from=sakura-dev-tools:04-pdf2htmlex-builder \
+    /artifacts/share/ \
+    /usr/local/share/
+
+RUN ldconfig

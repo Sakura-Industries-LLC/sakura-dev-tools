@@ -1,0 +1,24 @@
+name = "typstyle"
+type = "cli"
+
+[platform.linux]
+download-file = "typstyle-{arch}-unknown-linux-musl"
+exe-path = "typstyle"
+
+[platform.macos]
+download-file = "typstyle-{arch}-apple-darwin"
+exe-path = "typstyle"
+
+[platform.windows]
+download-file = "typstyle-{arch}-pc-windows-msvc.exe"
+exe-path = "typstyle.exe"
+
+[install]
+download-url = "https://github.com/typstyle-rs/typstyle/releases/download/v{version}/{download_file}"
+
+[install.arch]
+aarch64 = "aarch64"
+x86_64 = "x86_64"
+
+[resolve]
+git-url = "https://github.com/typstyle-rs/typstyle"

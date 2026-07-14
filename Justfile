@@ -12,12 +12,10 @@ moon-setup:
     moon sync config-schemas
 
 # Check if anything is outdated
-outdated:
-    ./tools/outdated.py
+outdated: (_container-mount "./tools/outdated.py")
 
 # Check if any tools have updates and update to their latest versions
-outdated-update:
-    ./tools/outdated.py --update
+outdated-update: (_container-mount "./tools/outdated.py --update")
 
 # Build container setup
 build-setup:
@@ -28,6 +26,11 @@ build-setup:
     docker build -f tools/Dockerfile.02-rust -t sakura-dev-tools:02-rust \
         --build-arg NEXTEST_VERSION .
     docker build -f tools/Dockerfile.03-go -t sakura-dev-tools:03-go .
+    docker build -f tools/Dockerfile.04-pdf2htmlex-builder \
+        -t sakura-dev-tools:04-pdf2htmlex-builder \
+        --build-arg PDF2HTMLEX_COMMIT .
+    docker build -f tools/Dockerfile.05-pdf2htmlex \
+        -t sakura-dev-tools:05-pdf2htmlex .
     docker build -f tools/Dockerfile.zz-tools -t sakura-dev-tools:latest .
 
 # Make sure cache-dirs exist
