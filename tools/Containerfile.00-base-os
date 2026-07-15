@@ -20,6 +20,7 @@ RUN set -eux; \
         gcc \
         git \
         gnupg \
+        groff \
         libbluetooth-dev \
         libbz2-dev \
         libc6-dev \
@@ -34,6 +35,7 @@ RUN set -eux; \
         libpango-1.0-0 \
         libpangoft2-1.0-0 \
         libreadline-dev \
+        librsvg2-bin \
         libsqlite3-dev \
         libssl-dev \
         libzstd-dev \
@@ -43,6 +45,7 @@ RUN set -eux; \
         python3-venv \
         python3-pip \
         ripgrep \
+        texlive-full \
         tk-dev \
         tzdata \
         uuid-dev \

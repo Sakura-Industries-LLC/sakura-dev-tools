@@ -25,7 +25,7 @@ Thumbs.db
 
 # Moon cache
 .moon/cache/
-.moon/docker-cache/
+.moon/container-cache/
 
 # JS package installs
 **/node_modules/
@@ -38,3 +38,4 @@ tools/target/
 .cache/
 extension/zed/grammars/
 __pycache__
+.moon/podman-cache/

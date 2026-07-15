@@ -196,7 +196,7 @@ class DebianSlimTag:
 
 
 def latest_debian_slim_tag(current_tag: str) -> DebianSlimTag:
-    """Return the latest numbered Docker Hub Debian slim tag."""
+    """Return the latest numbered Debian slim tag from the container registry."""
     current = parse_debian_slim_tag(strip_digest(current_tag))
     if current is None:
         msg = f"DEBIAN_TAG must be a numbered Debian slim tag, got {current_tag!r}"
@@ -228,7 +228,7 @@ def latest_debian_slim_tag(current_tag: str) -> DebianSlimTag:
 
 
 def strip_digest(tag: str) -> str:
-    """Return a Docker tag without an optional @sha256 digest suffix."""
+    """Return a container tag without an optional @sha256 digest suffix."""
     return tag.split("@", 1)[0]
 
 
@@ -245,7 +245,7 @@ def parse_debian_slim_tag(tag: str) -> DebianSlimTag | None:
 
 
 def debian_manifest_digest(tag: str) -> str:
-    """Resolve the Docker registry digest for a Debian tag."""
+    """Resolve the container registry digest for a Debian tag."""
     token_url = (
         "https://auth.docker.io/token"
         "?service=registry.docker.io&scope=repository:library/debian:pull"

@@ -1,0 +1,27 @@
+name = "pandoc"
+type = "cli"
+
+[platform.linux]
+archive-prefix = "pandoc-3.10"
+download-file = "pandoc-3.10-linux-{arch}.tar.gz"
+exe-path = "bin/pandoc"
+
+[platform.macos]
+archive-prefix = "pandoc-3.10"
+download-file = "pandoc-3.10-{arch}-macOS.zip"
+exe-path = "bin/pandoc"
+
+[platform.windows]
+archive-prefix = "pandoc-3.10"
+download-file = "pandoc-3.10-windows-{arch}.zip"
+exe-path = "pandoc.exe"
+
+[install]
+download-url = "https://github.com/jgm/pandoc/releases/download/3.10/{download_file}"
+
+[install.arch]
+aarch64 = "arm64"
+x86_64 = "amd64"
+
+[resolve]
+versions = ["3.10.0"]

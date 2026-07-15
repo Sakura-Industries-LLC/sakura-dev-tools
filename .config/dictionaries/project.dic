@@ -1,4 +1,5 @@
 binstall
+containerfile
 cyclonedx
 dpkg
 dotenv
@@ -7,6 +8,7 @@ fontconfig
 fontforge
 gobin
 gomod
+groff
 gsize
 htmlex
 ifdef
@@ -19,6 +21,7 @@ libharfbuzz
 libjpeg
 libpango
 libpangoft
+librsvg
 libdb
 libgdbm
 libncursesw
@@ -36,6 +39,7 @@ prototools
 roboto
 rumdl
 sakura
+texlive
 tlsv
 tmpl
 tzdata

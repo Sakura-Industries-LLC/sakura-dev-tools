@@ -77,10 +77,10 @@ tasks:
       - "**/*.markdown"
       - "!**/node_modules/**"
 
-  docker-cache-dir:
+  podman-cache-dir:
     command: "mkdir"
     args:
       - "-p"
-      - ".moon/docker-cache"
+      - ".moon/podman-cache"
     options:
       runInCI: false

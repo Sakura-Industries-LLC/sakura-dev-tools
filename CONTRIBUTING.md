@@ -26,7 +26,7 @@ No proposal in this form should expect a timely response, or even a review.
 
 This project is still evolving.
 Public availability does not imply image-tag stability, configuration stability, or compatibility guarantees.
-We may change base images, drop tools, restructure the Dockerfile layering, or break downstream forks without notice.
+We may change base images, drop tools, restructure the Containerfile layering, or break downstream forks without notice.
 
 You are welcome to fork the project and adapt it for your own use case.
 Forks are independent projects, and we do not guarantee compatibility with them.

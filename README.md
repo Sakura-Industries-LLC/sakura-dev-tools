@@ -10,15 +10,15 @@ into one reproducible environment that downstream projects can mount as their bu
 The repository is intentionally small.
 Everything that ends up inside the final image lives under `tools/`; everything that drives the build lives at the repo root.
 
-* `tools/Dockerfile.00-base-os` - Debian base layer with native build dependencies.
-* `tools/Dockerfile.01-proto` - installs `proto` and every tool pinned in `.prototools`.
-* `tools/Dockerfile.02-rust` - adds a nightly Rust toolchain (for `rustfmt`) and `cargo-nextest`.
-* `tools/Dockerfile.03-go` - Go tooling layer:
+* `tools/Containerfile.00-base-os` - Debian base layer with native build dependencies.
+* `tools/Containerfile.01-proto` - installs `proto` and every tool pinned in `.prototools`.
+* `tools/Containerfile.02-rust` - adds a nightly Rust toolchain (for `rustfmt`) and `cargo-nextest`.
+* `tools/Containerfile.03-go` - Go tooling layer:
   copies `go/check_go_licenses.py` into `/root/go` so it is on `PATH` for downstream Go projects.
   `cyclonedx-gomod` itself is installed at the proto layer via `.prototools`.
-* `tools/Dockerfile.04-pdf2htmlex-builder` - builds pdf2htmlEX and its runtime dependencies.
-* `tools/Dockerfile.05-pdf2htmlex` - copies the pdf2htmlEX runtime artifacts without build dependencies.
-* `tools/Dockerfile.zz-tools` - the final `sakura-dev-tools:latest` image, with `/repo` as the working directory.
+* `tools/Containerfile.04-pdf2htmlex-builder` - builds pdf2htmlEX and its runtime dependencies.
+* `tools/Containerfile.05-pdf2htmlex` - copies the pdf2htmlEX runtime artifacts without build dependencies.
+* `tools/Containerfile.zz-tools` - the final `sakura-dev-tools:latest` image, with `/repo` as the working directory.
 * `tools/outdated.py` - reports which pinned versions in `.env` and `.prototools` have newer upstream releases;
   supports `--update` to refresh them.
 * `tools/stage2/` - sidecar pin file for tools that `proto` cannot install safely; see its `README.md`.
@@ -29,7 +29,7 @@ Everything that ends up inside the final image lives under `tools/`; everything 
 
 ## Layer naming
 
-The Dockerfile prefix is load-bearing.
+The Containerfile prefix is load-bearing.
 Each layer names a stage in a fixed order, and the final `zz-tools` image is what consumers mount:
 
 | Prefix | Role                                                                                  |
@@ -47,9 +47,9 @@ New layers go between `02-` and `zz-`; the numeric prefix is the build order, so
 
 ## Building
 
-Install `docker`, `just`, and `moon` on the host.
+Install `podman`, `just`, and `moon` on the host.
 
-* `just build-setup` - builds every Dockerfile layer and tags the result as `sakura-dev-tools:latest`.
+* `just build-setup` - builds every Containerfile layer and tags the result as `sakura-dev-tools:latest`.
 * `just fix` - runs `moon run :fix` inside the container.
 * `just ci` - runs `moon run :ci` inside the container.
 * `just fix-ci` - both, in order.

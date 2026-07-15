@@ -16,6 +16,6 @@
     },
   },
   "file_types": {
-    "Dockerfile": ["Dockerfile.*"],
+    "Dockerfile": ["Containerfile.*"],
   },
 }

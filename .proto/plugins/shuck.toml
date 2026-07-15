@@ -1,0 +1,26 @@
+name = "shuck"
+type = "cli"
+
+[platform.linux]
+archive-prefix = "shuck-cli-{arch}-unknown-linux-musl"
+download-file = "shuck-cli-{arch}-unknown-linux-musl.tar.xz"
+checksum-file = "shuck-cli-{arch}-unknown-linux-musl.tar.xz.sha256"
+exe-path = "shuck-cli-{arch}-unknown-linux-musl/shuck"
+
+[platform.macos]
+archs = ["aarch64"]
+archive-prefix = "shuck-cli-{arch}-apple-darwin"
+download-file = "shuck-cli-{arch}-apple-darwin.tar.xz"
+checksum-file = "shuck-cli-{arch}-apple-darwin.tar.xz.sha256"
+exe-path = "shuck-cli-{arch}-apple-darwin/shuck"
+
+[install]
+download-url = "https://github.com/ewhauser/shuck/releases/download/v{version}/{download_file}"
+checksum-url = "https://github.com/ewhauser/shuck/releases/download/v{version}/{checksum_file}"
+
+[install.arch]
+aarch64 = "aarch64"
+x86_64 = "x86_64"
+
+[resolve]
+git-url = "https://github.com/ewhauser/shuck"
