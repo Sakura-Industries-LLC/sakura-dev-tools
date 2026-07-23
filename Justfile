@@ -32,6 +32,10 @@ build-setup:
     podman build -f tools/Containerfile.05-pdf2htmlex \
         -t sakura-dev-tools:05-pdf2htmlex .
     podman build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest .
+    scripts/report-image-sizes.py
+    echo "Cleaning up stale podman layers..."
+    podman image prune --force
+    echo "DONE!"
 
 # Make sure cache-dirs exist
 setup-cache-dir:

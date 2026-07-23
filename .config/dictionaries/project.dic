@@ -33,6 +33,7 @@ licences
 netbase
 nextest
 noto
+numfmt
 pipefail
 poppler
 prototools
@@ -44,3 +45,4 @@ tlsv
 tmpl
 tzdata
 venv
+zellij
