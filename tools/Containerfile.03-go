@@ -5,6 +5,6 @@ ENV PATH="/root/go:$PATH"
 
 ARG GOPLS_VERSION
 
-RUN go install golang.org/x/tools/gopls@${GOPLS_VERSION}
+RUN go install golang.org/x/tools/gopls@v${GOPLS_VERSION}
 
 COPY go/ /root/go

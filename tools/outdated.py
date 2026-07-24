@@ -32,7 +32,7 @@ def main() -> int:
         action="store_true",
         help=(
             "run proto outdated --update from tools/stage2, sync .env tool "
-            "versions, and prompt for DEBIAN_TAG"
+            "versions, and prompt for latest .env versions"
         ),
     )
     args = parser.parse_args()
@@ -92,18 +92,28 @@ def main() -> int:
     )
 
     env_values = read_env(env_path)
+    current_gopls = env_values.get("GOPLS_VERSION")
+    if not current_gopls:
+        console.print("[red]GOPLS_VERSION is not set in .env[/red]")
+        return 1
+
+    with console.status("checking latest gopls version ...", spinner="dots"):
+        latest_gopls = latest_go_module_version("golang.org/x/tools/gopls")
+
+    env_values = read_env(env_path)
     current_debian = env_values.get("DEBIAN_TAG")
     if not current_debian:
         console.print("[red]DEBIAN_TAG is not set in .env[/red]")
         return 1
 
-    console.print(f"Current Debian Version == {current_debian}", soft_wrap=True)
     with console.status("checking latest Debian version ...", spinner="dots"):
         latest_debian = latest_debian_slim_tag(current_debian)
-    handle_debian_tag(
+    handle_latest_versions(
         env_path=env_path,
-        current=current_debian,
-        latest=latest_debian,
+        current_debian=current_debian,
+        latest_debian=latest_debian,
+        current_gopls=current_gopls,
+        latest_gopls=latest_gopls,
         update=args.update,
     )
     return 0
@@ -184,6 +194,18 @@ def sync_env_version(
     console.print(f"[yellow]{env_key} differs from {source_label}:[/yellow]")
     console.print(f"  current: {env_version or '<unset>'}")
     console.print(f"  could be: {source_version}")
+
+
+def latest_go_module_version(module: str) -> str:
+    """Resolve the latest tagged version of a Go module."""
+    url = f"https://proxy.golang.org/{module}/@latest"
+    with urllib.request.urlopen(url, timeout=30) as response:
+        payload = json.load(response)
+
+    version = payload.get("Version", "")
+    if not version.startswith("v"):
+        raise RuntimeError(f"invalid version returned for {module!r}: {version!r}")
+    return version.removeprefix("v")
 
 
 @dataclass(frozen=True, order=True)
@@ -277,50 +299,47 @@ def debian_manifest_digest(tag: str) -> str:
     return digest
 
 
-def handle_debian_tag(
+def handle_latest_versions(
     *,
     env_path: Path,
-    current: str,
-    latest: DebianSlimTag,
+    current_debian: str,
+    latest_debian: DebianSlimTag,
+    current_gopls: str,
+    latest_gopls: str,
     update: bool,
 ) -> None:
-    """Report or optionally update DEBIAN_TAG."""
-    current_without_digest = strip_digest(current)
-    latest_tag = latest.tag
-    current.split("@", 1)[1] if "@" in current else None
+    """Report and optionally update the latest Debian and gopls versions."""
+    latest_tag = latest_debian.tag
 
     with console.status(f"resolving debian:{latest_tag} digest ...", spinner="dots"):
         latest_pinned = f"{latest_tag}@{debian_manifest_digest(latest_tag)}"
 
-    if current == latest_pinned:
-        console.print(
-            f"[green]DEBIAN_TAG is current:[/green] {current}", soft_wrap=True
-        )
-        return
+    console.print(f"Latest Debian: {current_debian}, {latest_pinned}")
+    console.print(f"Latest Gopls: {current_gopls}, {latest_gopls}")
 
-    if current_without_digest == latest_tag:
-        console.print(
-            "[yellow]DEBIAN_TAG is on the latest tag but is not digest-pinned:[/yellow]",
-        )
-        console.print(f"  current: {current}")
-        console.print(f"  could be: {latest_pinned}", soft_wrap=True)
-    else:
-        console.print(
-            "[yellow]DEBIAN_TAG differs from latest Debian slim tag:[/yellow]"
-        )
-        console.print(f"  current: {current}")
-        console.print(f"  could be: {latest_pinned}", soft_wrap=True)
+    debian_changed = current_debian != latest_pinned
+    gopls_changed = current_gopls != latest_gopls
+    if not debian_changed and not gopls_changed:
+        console.print("[green]All latest versions are selected.[/green]")
+        return
 
     if not update:
         return
 
-    if Confirm.ask(
-        f"Update DEBIAN_TAG from {current} to {latest_pinned}?",
-        default=False,
-    ):
+    if not Confirm.ask("Update to Latest", default=False):
+        return
+
+    if debian_changed:
         write_env_value(env_path, "DEBIAN_TAG", latest_pinned)
         console.print(
-            f"[green]updated DEBIAN_TAG:[/green] {current} -> {latest_pinned}"
+            f"[green]updated DEBIAN_TAG:[/green] "
+            f"{current_debian} -> {latest_pinned}"
+        )
+    if gopls_changed:
+        write_env_value(env_path, "GOPLS_VERSION", latest_gopls)
+        console.print(
+            f"[green]updated GOPLS_VERSION:[/green] "
+            f"{current_gopls} -> {latest_gopls}"
         )
 
 
