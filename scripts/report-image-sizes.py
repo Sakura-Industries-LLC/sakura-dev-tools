@@ -19,13 +19,25 @@ from rich.table import Table
 
 
 IMAGE_PREFIX = "sakura-dev-tools:"
-LAYER_PATTERN = re.compile(r"^(?P<name>\d{2}-[^:]+)$")
+LAYER_PATTERN = re.compile(
+    r"^(?P<number>\d{2})(?P<suffix>[^-]*)-(?P<label>[^:]+)$"
+)
 
 
 @dataclass(frozen=True)
 class ImageSize:
     name: str
     size: int
+
+    @property
+    def stage_number(self) -> int:
+        match = LAYER_PATTERN.fullmatch(self.name)
+        assert match is not None
+        return int(match.group("number"))
+
+    @property
+    def is_builder(self) -> bool:
+        return self.name.endswith("-builder")
 
 
 def main() -> int:
@@ -42,23 +54,27 @@ def main() -> int:
 
     previous_any_size = 0
     previous_non_builder_size = 0
-    for image in images:
-        is_builder = image.name.endswith("-builder")
-        parent_size = previous_any_size if is_builder else previous_non_builder_size
-        included = "no" if is_builder else "yes"
-        table.add_row(
-            f"{IMAGE_PREFIX}{image.name}",
-            format_size(image.size - parent_size),
-            format_size(image.size),
-            included,
-        )
-        previous_any_size = image.size
-        if not is_builder:
-            previous_non_builder_size = image.size
+    for group in image_groups(images):
+        for image in group:
+            parent_size = (
+                previous_any_size if image.is_builder else previous_non_builder_size
+            )
+            included = "no" if image.is_builder else "yes"
+            table.add_row(
+                f"{IMAGE_PREFIX}{image.name}",
+                format_size(image.size - parent_size),
+                format_size(image.size),
+                included,
+            )
+
+        previous_any_size = max(image.size for image in group)
+        non_builder_sizes = [image.size for image in group if not image.is_builder]
+        if non_builder_sizes:
+            previous_non_builder_size = max(non_builder_sizes)
 
     latest = find_latest()
     if latest is not None:
-        parent_size = previous_any_size
+        parent_size = max(image.size for image in images)
         table.add_row(
             "sakura-dev-tools:latest",
             format_size(latest - parent_size),
@@ -87,7 +103,16 @@ def find_images() -> list[ImageSize]:
         if LAYER_PATTERN.fullmatch(name) is None:
             continue
         images.append(ImageSize(name=name, size=inspect_size(reference)))
-    return sorted(images, key=lambda image: int(image.name[:2]))
+    return sorted(images, key=lambda image: (image.stage_number, image.name))
+
+
+def image_groups(images: list[ImageSize]) -> list[list[ImageSize]]:
+    groups: list[list[ImageSize]] = []
+    for image in images:
+        if not groups or groups[-1][0].stage_number != image.stage_number:
+            groups.append([])
+        groups[-1].append(image)
+    return groups
 
 
 def find_latest() -> int | None:

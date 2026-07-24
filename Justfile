@@ -36,8 +36,8 @@ build-setup:
     }
     trap cleanup EXIT
 
-    podman build -f tools/Containerfile.04-pdf2htmlex-builder \
-        -t sakura-dev-tools:04-pdf2htmlex-builder \
+    podman build -f tools/Containerfile.01a-pdf2htmlex-builder \
+        -t sakura-dev-tools:01a-pdf2htmlex-builder \
         --build-arg PDF2HTMLEX_COMMIT . &
     builder_pid=$!
 
@@ -51,8 +51,8 @@ build-setup:
     wait "${builder_pid}"
     builder_pid=
 
-    podman build -f tools/Containerfile.05-pdf2htmlex \
-        -t sakura-dev-tools:05-pdf2htmlex .
+    podman build -f tools/Containerfile.04-pdf2htmlex \
+        -t sakura-dev-tools:04-pdf2htmlex .
     podman build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest .
     scripts/report-image-sizes.py
     echo "Cleaning up stale podman layers..."
