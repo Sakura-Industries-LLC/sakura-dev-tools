@@ -19,17 +19,38 @@ outdated-update: (_container-mount "./tools/outdated.py --update")
 
 # Build container setup
 build-setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
     podman build -f tools/Containerfile.00-base-os -t sakura-dev-tools:00-base-os \
         --build-arg DEBIAN_TAG .
+
+    builder_pid=
+    cleanup() {
+        status=$?
+        if [[ -n "${builder_pid}" ]]; then
+            kill "${builder_pid}" 2>/dev/null || true
+            wait "${builder_pid}" 2>/dev/null || true
+        fi
+        exit "${status}"
+    }
+    trap cleanup EXIT
+
+    podman build -f tools/Containerfile.04-pdf2htmlex-builder \
+        -t sakura-dev-tools:04-pdf2htmlex-builder \
+        --build-arg PDF2HTMLEX_COMMIT . &
+    builder_pid=$!
+
     podman build -f tools/Containerfile.01-proto -t sakura-dev-tools:01-proto \
         --build-arg PROTO_VERSION .
     podman build -f tools/Containerfile.02-rust -t sakura-dev-tools:02-rust \
         --build-arg NEXTEST_VERSION .
     podman build -f tools/Containerfile.03-go -t sakura-dev-tools:03-go \
         --build-arg GOPLS_VERSION .
-    podman build -f tools/Containerfile.04-pdf2htmlex-builder \
-        -t sakura-dev-tools:04-pdf2htmlex-builder \
-        --build-arg PDF2HTMLEX_COMMIT .
+
+    wait "${builder_pid}"
+    builder_pid=
+
     podman build -f tools/Containerfile.05-pdf2htmlex \
         -t sakura-dev-tools:05-pdf2htmlex .
     podman build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest .

@@ -4,7 +4,7 @@ type = "cli"
 [platform.linux]
 download-file = "tinymist-{arch}-unknown-linux-{libc}.tar.gz"
 checksum-file = "tinymist-{arch}-unknown-linux-{libc}.tar.gz.sha256"
-exe-path = "tinymist"
+exe-path = "tinymist-{arch}-unknown-linux-{libc}/tinymist"
 
 [platform.macos]
 download-file = "tinymist-{arch}-apple-darwin.tar.gz"

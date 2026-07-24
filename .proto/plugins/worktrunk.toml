@@ -1,4 +1,4 @@
-name = "worktrunk"
+name = "wt"
 type = "cli"
 
 [platform.linux]

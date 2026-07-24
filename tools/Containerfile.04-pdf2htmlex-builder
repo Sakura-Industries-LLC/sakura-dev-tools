@@ -1,4 +1,4 @@
-FROM sakura-dev-tools:03-go
+FROM sakura-dev-tools:00-base-os
 
 ARG PDF2HTMLEX_COMMIT
 
