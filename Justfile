@@ -25,7 +25,8 @@ build-setup:
         --build-arg PROTO_VERSION .
     podman build -f tools/Containerfile.02-rust -t sakura-dev-tools:02-rust \
         --build-arg NEXTEST_VERSION .
-    podman build -f tools/Containerfile.03-go -t sakura-dev-tools:03-go .
+    podman build -f tools/Containerfile.03-go -t sakura-dev-tools:03-go \
+        --build-arg GOPLS_VERSION .
     podman build -f tools/Containerfile.04-pdf2htmlex-builder \
         -t sakura-dev-tools:04-pdf2htmlex-builder \
         --build-arg PDF2HTMLEX_COMMIT .

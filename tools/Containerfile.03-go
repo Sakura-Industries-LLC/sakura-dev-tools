@@ -3,4 +3,8 @@ FROM sakura-dev-tools:02-rust
 ENV GOBIN=/root/.proto/bin
 ENV PATH="/root/go:$PATH"
 
+ARG GOPLS_VERSION
+
+RUN go install golang.org/x/tools/gopls@${GOPLS_VERSION}
+
 COPY go/ /root/go
