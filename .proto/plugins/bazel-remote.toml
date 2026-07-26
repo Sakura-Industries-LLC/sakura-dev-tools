@@ -1,0 +1,20 @@
+name = "bazel-remote"
+type = "cli"
+
+[platform.linux]
+download-file = "bazel-remote-{version}-linux-{arch}"
+exe-path = "bazel-remote-{version}-linux-{arch}"
+
+[platform.macos]
+download-file = "bazel-remote-{version}-darwin-{arch}"
+exe-path = "bazel-remote-{version}-darwin-{arch}"
+
+[install]
+download-url = "https://github.com/buchgr/bazel-remote/releases/download/v{version}/{download_file}"
+
+[install.arch]
+aarch64 = "arm64"
+x86_64 = "amd64"
+
+[resolve]
+git-url = "https://github.com/buchgr/bazel-remote"
