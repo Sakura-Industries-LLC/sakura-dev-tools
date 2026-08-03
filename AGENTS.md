@@ -34,7 +34,7 @@ Each Containerfile should `FROM` the previous stage so the build cache is shared
 
 Two files hold the pin set, and they are the single source of truth.
 
-* `.env` - `DEBIAN_TAG`, `PROTO_VERSION`, `NEXTEST_VERSION` (consumed by `just build-setup` as `--build-arg`).
+* `.env` - `DEBIAN_TAG`, `PROTO_VERSION`, `NEXTEST_VERSION`, and `GIT_VERSION` (consumed by `just build-setup` as `--build-arg`).
 * `.prototools` - every other tool the image provides.
 
 Use `just outdated` to see what is behind, and `just outdated-update` to refresh.

@@ -1,0 +1,32 @@
+FROM sakura-dev-tools:02-rust
+
+ARG GIT_VERSION
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        autoconf \
+        gettext \
+        libcurl4-gnutls-dev \
+        libexpat1-dev \
+        libpcre2-dev \
+        pkg-config \
+        unzip \
+    ; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+RUN set -eux; \
+    curl --fail --location --proto '=https' --tlsv1.2 \
+        --retry 3 \
+        "https://github.com/git/git/archive/refs/tags/v${GIT_VERSION}.zip" \
+        --output git.zip; \
+    unzip -q git.zip; \
+    cd "git-${GIT_VERSION}"; \
+    make configure; \
+    ./configure --prefix=/opt/git; \
+    make -j"$(nproc)"; \
+    make install; \
+    rm -rf /build

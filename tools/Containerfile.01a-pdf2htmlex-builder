@@ -4,11 +4,6 @@ ARG PDF2HTMLEX_COMMIT
 
 WORKDIR /build
 
-RUN apt-get update; \
-    apt-get install -y --no-install-recommends sudo; \
-    apt-get clean; \
-    rm -rf /var/lib/apt/lists/*
-
 RUN set -eux; \
     git clone --depth 1 --no-checkout \
         https://github.com/pdf2htmlEX/pdf2htmlEX.git \

@@ -1,4 +1,4 @@
-FROM sakura-dev-tools:04-pdf2htmlex
+FROM sakura-dev-tools:05-git
 
 RUN mkdir /repo
 RUN env

@@ -10,13 +10,18 @@ ENV MOON_TOOLCHAIN_FORCE_GLOBALS=true
 
 # install proto toolchain manager
 #   and every tool pinned in .prototools in one cacheable layer
-RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/moonrepo/proto/releases/download/v${PROTO_VERSION}/proto_cli-installer.sh | sh \
-    && bash -o pipefail -c \
-        'proto install 2>&1 | sed -u -E "/^\[[^]]+\] Waiting on requirements:/d"' || { \
+RUN set -eux; \
+    curl --proto '=https' --tlsv1.2 -LsSf https://github.com/moonrepo/proto/releases/download/v${PROTO_VERSION}/proto_cli-installer.sh | sh ; \
+    if bash -o pipefail -c \
+        'proto install 2>&1 | sed -u -E "/^\[[^]]+\] Waiting on requirements:/d"'; then \
+        :; \
+    else \
         status=$?; \
-        find /root/.proto -type f -iname '*.log' -exec sh -c 'cat "$1"' _ {} \;; \
+        find /root -type f -iname '*.log' -exec sh -c 'cat "$1"' _ {} \;; \
+        find . -type f -iname '*.log' -exec sh -c 'cat "$1"' _ {} \;; \
         exit "$status"; \
-    } \
-    && ln -sf /toolchain/.prototools /root/.proto/.prototools \
-    && npm config set prefix /root/.proto \
-    && rm -rf /root/.proto/cache /root/.proto/temp
+    fi; \
+    ln -sf /toolchain/.prototools /root/.proto/.prototools; \
+    npm config set prefix /root/.proto; \
+    rm -rf /root/.proto/cache /root/.proto/temp; \
+    find / -type f -iname '*.log' -delete 2>/dev/null || true

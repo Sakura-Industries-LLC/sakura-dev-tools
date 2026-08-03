@@ -72,6 +72,13 @@ def main() -> int:
             "tools/stage2/.prototools[/red]",
         )
         return 1
+    stage2_git = read_prototools_version(stage2_prototools_path, "asdf:git")
+    if stage2_git is None:
+        console.print(
+            "[red]could not read asdf:git version from "
+            "tools/stage2/.prototools[/red]",
+        )
+        return 1
 
     sync_env_version(
         env_path=env_path,
@@ -88,6 +95,15 @@ def main() -> int:
         env_key="NEXTEST_VERSION",
         source_label="tools/stage2/.prototools",
         source_version=stage2_nextest,
+        update=args.update,
+    )
+    env_values = read_env(env_path)
+    sync_env_version(
+        env_path=env_path,
+        env_values=env_values,
+        env_key="GIT_VERSION",
+        source_label="tools/stage2/.prototools",
+        source_version=stage2_git,
         update=args.update,
     )
 
@@ -124,6 +140,7 @@ def run_proto_outdated(*, update: bool, cwd: Path) -> int:
     command = ["proto", "outdated", "--reporter", "text"]
     if update:
         command.append("--update")
+        command.append("--latest")
     return subprocess.run(command, cwd=cwd, check=False).returncode
 
 
@@ -332,14 +349,12 @@ def handle_latest_versions(
     if debian_changed:
         write_env_value(env_path, "DEBIAN_TAG", latest_pinned)
         console.print(
-            f"[green]updated DEBIAN_TAG:[/green] "
-            f"{current_debian} -> {latest_pinned}"
+            f"[green]updated DEBIAN_TAG:[/green] {current_debian} -> {latest_pinned}"
         )
     if gopls_changed:
         write_env_value(env_path, "GOPLS_VERSION", latest_gopls)
         console.print(
-            f"[green]updated GOPLS_VERSION:[/green] "
-            f"{current_gopls} -> {latest_gopls}"
+            f"[green]updated GOPLS_VERSION:[/green] {current_gopls} -> {latest_gopls}"
         )
 
 

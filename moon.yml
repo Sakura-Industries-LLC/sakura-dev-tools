@@ -1,6 +1,7 @@
 tasks:
   fix:
     deps:
+      - "root:dictionary-fix"
       - "root:markdown-fix"
       - "root:test-rustfmt"
     options:
@@ -11,6 +12,18 @@ tasks:
     args:
       - "+nightly"
       - "--version"
+
+  dictionary-fix:
+    command: "sort"
+    args:
+      - "--ignore-case"
+      - "--output"
+      - ".config/dictionaries/project.dic"
+      - ".config/dictionaries/project.dic"
+    options:
+      runInCI: false
+    inputs:
+      - ".config/dictionaries/project.dic"
 
   ci:
     deps:

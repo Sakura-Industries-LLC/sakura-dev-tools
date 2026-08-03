@@ -1,1 +1,2 @@
 "cargo:cargo-nextest" = "0.9.140"
+"asdf:git" = "2.55.0"

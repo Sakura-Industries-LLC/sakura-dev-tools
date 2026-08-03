@@ -1,0 +1,13 @@
+FROM sakura-dev-tools:04-pdf2htmlex
+
+# Git's installed runtime consists of the front-end binaries, git-core helpers,
+# and the templates used by commands such as `git init`.
+COPY --from=sakura-dev-tools:03a-git-builder \
+    /opt/git/bin/ \
+    /usr/local/bin/
+COPY --from=sakura-dev-tools:03a-git-builder \
+    /opt/git/libexec/ \
+    /usr/local/libexec/
+COPY --from=sakura-dev-tools:03a-git-builder \
+    /opt/git/share/git-core/ \
+    /usr/local/share/git-core/
