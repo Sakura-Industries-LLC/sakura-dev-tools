@@ -17,6 +17,7 @@ tasks:
     command: "sort"
     args:
       - "--ignore-case"
+      - "--unique"
       - "--output"
       - ".config/dictionaries/project.dic"
       - ".config/dictionaries/project.dic"

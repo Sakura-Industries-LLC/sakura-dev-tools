@@ -39,3 +39,4 @@ tools/target/
 extension/zed/grammars/
 __pycache__
 .moon/podman-cache/
+.moon/workspace-cache/
