@@ -1,0 +1,28 @@
+name = "tofu"
+type = "cli"
+
+[platform.linux]
+download-file = "tofu_{version}_linux_{arch}.zip"
+checksum-file = "tofu_{version}_SHA256SUMS"
+exe-path = "tofu"
+
+[platform.macos]
+download-file = "tofu_{version}_darwin_{arch}.zip"
+checksum-file = "tofu_{version}_SHA256SUMS"
+exe-path = "tofu"
+
+[platform.windows]
+download-file = "tofu_{version}_windows_{arch}.zip"
+checksum-file = "tofu_{version}_SHA256SUMS"
+exe-path = "tofu.exe"
+
+[install]
+download-url = "https://github.com/opentofu/opentofu/releases/download/v{version}/{download_file}"
+checksum-url = "https://github.com/opentofu/opentofu/releases/download/v{version}/{checksum_file}"
+
+[install.arch]
+aarch64 = "arm64"
+x86_64 = "amd64"
+
+[resolve]
+git-url = "https://github.com/opentofu/opentofu"

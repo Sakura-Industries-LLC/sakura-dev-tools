@@ -22,6 +22,7 @@ Thumbs.db
 
 # Environment
 .env.local
+.secrets
 
 # Moon cache
 .moon/cache/
