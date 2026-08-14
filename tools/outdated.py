@@ -13,6 +13,7 @@ import argparse
 import json
 import re
 import subprocess
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -39,6 +40,7 @@ def main() -> int:
 
     repo_root = Path(__file__).resolve().parent.parent
     env_path = repo_root / ".env"
+    secrets_path = repo_root / ".secrets"
     prototools_path = repo_root / ".prototools"
     stage2_dir = repo_root / "tools" / "stage2"
     stage2_prototools_path = stage2_dir / ".prototools"
@@ -58,6 +60,7 @@ def main() -> int:
         return proto_status
 
     env_values = read_env(env_path)
+    secrets = read_env(secrets_path) if secrets_path.exists() else {}
     prototools_proto = read_prototools_version(prototools_path, "proto")
     if prototools_proto is None:
         console.print("[red]could not read proto version from .prototools[/red]")
@@ -113,17 +116,24 @@ def main() -> int:
         console.print("[red]GOPLS_VERSION is not set in .env[/red]")
         return 1
 
-    with console.status("checking latest gopls version ...", spinner="dots"):
-        latest_gopls = latest_go_module_version("golang.org/x/tools/gopls")
+    try:
+        with console.status("checking latest gopls version ...", spinner="dots"):
+            latest_gopls = latest_go_module_version("golang.org/x/tools/gopls")
 
-    env_values = read_env(env_path)
-    current_debian = env_values.get("DEBIAN_TAG")
-    if not current_debian:
-        console.print("[red]DEBIAN_TAG is not set in .env[/red]")
+        env_values = read_env(env_path)
+        current_debian = env_values.get("DEBIAN_TAG")
+        if not current_debian:
+            console.print("[red]DEBIAN_TAG is not set in .env[/red]")
+            return 1
+
+        with console.status("checking latest Debian version ...", spinner="dots"):
+            latest_debian = latest_debian_slim_tag(current_debian, secrets=secrets)
+    except RuntimeError as error:
+        console.print(f"[red]Unable to check for updates:[/red] {error}")
+        console.print(
+            "[yellow]Check network access or Docker Hub availability, then try again.[/yellow]",
+        )
         return 1
-
-    with console.status("checking latest Debian version ...", spinner="dots"):
-        latest_debian = latest_debian_slim_tag(current_debian)
     handle_latest_versions(
         env_path=env_path,
         current_debian=current_debian,
@@ -234,7 +244,11 @@ class DebianSlimTag:
     tag: str
 
 
-def latest_debian_slim_tag(current_tag: str) -> DebianSlimTag:
+def latest_debian_slim_tag(
+    current_tag: str,
+    *,
+    secrets: dict[str, str],
+) -> DebianSlimTag:
     """Return the latest numbered Debian slim tag from the container registry."""
     current = parse_debian_slim_tag(strip_digest(current_tag))
     if current is None:
@@ -242,14 +256,56 @@ def latest_debian_slim_tag(current_tag: str) -> DebianSlimTag:
         raise RuntimeError(msg)
 
     url: str | None = (
-        "https://registry.hub.docker.com/v2/repositories/library/debian/tags"
+        "https://hub.docker.com/v2/namespaces/library/repositories/debian/tags"
         "?page_size=100&name=-slim"
     )
     best: DebianSlimTag | None = None
+    authorization = docker_hub_authorization(secrets)
 
     while url:
-        with urllib.request.urlopen(url, timeout=30) as response:
-            payload = json.load(response)
+        request = urllib.request.Request(
+            url,
+            headers={
+                "Accept": "application/json,text/plain,*/*",
+                "Accept-Language": "en-US,en;q=0.5",
+                "Cache-Control": "no-cache",
+                "Pragma": "no-cache",
+                **(
+                    {"Authorization": authorization}
+                    if authorization is not None
+                    else {}
+                ),
+                "User-Agent": (
+                    "Mozilla/5.0 (X11; Linux x86_64; rv:142.0) "
+                    "Gecko/20100101 Firefox/142.0"
+                ),
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                payload = json.load(response)
+        except urllib.error.HTTPError as error:
+            if error.code == 403:
+                if authorization is None:
+                    raise RuntimeError(
+                        "Docker Hub denied the unauthenticated tag request (HTTP 403). "
+                        "Copy .secrets.template to .secrets, set a Docker Hub username "
+                        "and read-only PAT, then run outdated-update again.",
+                    ) from error
+                raise RuntimeError(
+                    "Docker Hub denied the authenticated tag request (HTTP 403). "
+                    "Check that DOCKERHUB_USERNAME and DOCKERHUB_PAT in .secrets "
+                    "are valid and that the PAT has read access.",
+                ) from error
+            raise RuntimeError(
+                f"Docker Hub returned HTTP {error.code} while listing Debian tags "
+                f"({url}).",
+            ) from error
+        except urllib.error.URLError as error:
+            raise RuntimeError(
+                f"could not reach Docker Hub while listing Debian tags ({url}): "
+                f"{error.reason}",
+            ) from error
 
         for result in payload.get("results", []):
             candidate = parse_debian_slim_tag(result.get("name", ""))
@@ -264,6 +320,41 @@ def latest_debian_slim_tag(current_tag: str) -> DebianSlimTag:
         msg = f"no numbered Debian slim tags found at or after {current.tag!r}"
         raise RuntimeError(msg)
     return best
+
+
+def docker_hub_authorization(secrets: dict[str, str]) -> str | None:
+    """Exchange an optional Docker Hub PAT for an API bearer token."""
+    username = secrets.get("DOCKERHUB_USERNAME", "").strip()
+    pat = secrets.get("DOCKERHUB_PAT", "").strip()
+    if not username and not pat:
+        return None
+    if not username or not pat:
+        raise RuntimeError(
+            "Docker Hub credentials are incomplete in .secrets. Set both "
+            "DOCKERHUB_USERNAME and DOCKERHUB_PAT, or remove both entries.",
+        )
+
+    request = urllib.request.Request(
+        "https://hub.docker.com/v2/auth/token",
+        data=json.dumps({"identifier": username, "secret": pat}).encode(),
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:142.0) Gecko/20100101 Firefox/142.0",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            token = json.load(response).get("access_token")
+    except (urllib.error.HTTPError, urllib.error.URLError) as error:
+        detail = f"HTTP {error.code}" if isinstance(error, urllib.error.HTTPError) else str(error.reason)
+        raise RuntimeError(
+            f"Docker Hub authentication failed ({detail}). Check the credentials in .secrets.",
+        ) from error
+    if not token:
+        raise RuntimeError("Docker Hub authentication returned no access token.")
+    return f"Bearer {token}"
 
 
 def strip_digest(tag: str) -> str:
