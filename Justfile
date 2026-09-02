@@ -17,12 +17,63 @@ outdated: (_container-mount "./tools/outdated.py")
 # Check if any tools have updates and update to their latest versions
 outdated-update: (_container-mount "./tools/outdated.py --update")
 
-# Build container setup
-build-setup:
+# Build the container setup for the native platform, or all release platforms.
+build-setup *args:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    podman build -f tools/Containerfile.00-base-os -t sakura-dev-tools:00-base-os \
+    case "{{ args }}" in
+        "")
+            just _build-setup
+            ;;
+        --all)
+            # The final image tag is reused by each single-platform build.
+            # Remove a manifest from an earlier --all run before that reuse.
+            podman manifest rm sakura-dev-tools:latest 2>/dev/null || true
+            podman image rm sakura-dev-tools:latest 2>/dev/null || true
+
+            # A foreign-platform build executes Containerfile RUN commands
+            # through a kernel binfmt handler, rather than merely setting
+            # image metadata. Check it before building any image layers.
+            for platform in linux/amd64 linux/arm64; do
+                if ! podman run --rm --platform "${platform}" \
+                    docker.io/library/debian:trixie-slim true; then
+                    echo "Cannot execute ${platform} containers." >&2
+                    echo "Install a binfmt/QEMU emulator, then retry." >&2
+                    echo "For example: sudo podman run --privileged --rm docker.io/tonistiigi/binfmt --install arm64" >&2
+                    exit 1
+                fi
+            done
+
+            for architecture in amd64 arm64; do
+                CONTAINER_PLATFORM="linux/${architecture}" SKIP_PODMAN_PRUNE=1 just _build-setup
+                podman tag sakura-dev-tools:latest "sakura-dev-tools:latest-${architecture}"
+            done
+
+            podman image rm sakura-dev-tools:latest
+            podman manifest create sakura-dev-tools:latest
+            podman manifest add sakura-dev-tools:latest sakura-dev-tools:latest-amd64
+            podman manifest add sakura-dev-tools:latest sakura-dev-tools:latest-arm64
+            ;;
+        *)
+            echo "usage: just build-setup [--all]" >&2
+            exit 2
+            ;;
+    esac
+
+_build-setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    podman_build_args=()
+    if [[ -n "${CONTAINER_PLATFORM:-}" ]]; then
+        podman_build_args+=(--platform "${CONTAINER_PLATFORM}")
+    fi
+    podman_build() {
+        podman build "${podman_build_args[@]}" "$@"
+    }
+
+    podman_build -f tools/Containerfile.00-base-os -t sakura-dev-tools:00-base-os \
         --build-arg DEBIAN_TAG .
 
     pdf2htmlex_builder_pid=
@@ -41,18 +92,18 @@ build-setup:
     }
     trap cleanup EXIT
 
-    podman build -f tools/Containerfile.01a-pdf2htmlex-builder \
+    podman_build -f tools/Containerfile.01a-pdf2htmlex-builder \
         -t sakura-dev-tools:01a-pdf2htmlex-builder \
         --build-arg PDF2HTMLEX_COMMIT . &
     pdf2htmlex_builder_pid=$!
 
-    podman build -f tools/Containerfile.01-proto -t sakura-dev-tools:01-proto \
+    podman_build -f tools/Containerfile.01-proto -t sakura-dev-tools:01-proto \
         --build-arg PROTO_VERSION .
-    podman build -f tools/Containerfile.02-rust -t sakura-dev-tools:02-rust \
+    podman_build -f tools/Containerfile.02-rust -t sakura-dev-tools:02-rust \
         --build-arg NEXTEST_VERSION .
-    podman build -f tools/Containerfile.03-go -t sakura-dev-tools:03-go \
+    podman_build -f tools/Containerfile.03-go -t sakura-dev-tools:03-go \
         --build-arg GOPLS_VERSION .
-    podman build -f tools/Containerfile.03a-git-builder \
+    podman_build -f tools/Containerfile.03a-git-builder \
         -t sakura-dev-tools:03a-git-builder \
         --build-arg GIT_VERSION .
     git_builder_pid=$!
@@ -60,18 +111,20 @@ build-setup:
     wait "${pdf2htmlex_builder_pid}"
     pdf2htmlex_builder_pid=
 
-    podman build -f tools/Containerfile.04-pdf2htmlex \
+    podman_build -f tools/Containerfile.04-pdf2htmlex \
         -t sakura-dev-tools:04-pdf2htmlex .
 
     wait "${git_builder_pid}"
     git_builder_pid=
 
-    podman build -f tools/Containerfile.05-git \
+    podman_build -f tools/Containerfile.05-git \
         -t sakura-dev-tools:05-git .
-    podman build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest .
+    podman_build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest .
     scripts/report-image-sizes.py
-    echo "Cleaning up stale podman layers..."
-    podman image prune --force
+    if [[ "${SKIP_PODMAN_PRUNE:-}" != "1" ]]; then
+        echo "Cleaning up stale podman layers..."
+        podman image prune --force
+    fi
     echo "DONE!"
 
 # Make sure cache-dirs exist

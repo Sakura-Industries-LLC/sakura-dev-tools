@@ -1,4 +1,7 @@
+amd64
+arm64
 binstall
+binfmt
 containerfile
 cyclonedx
 dotenv
@@ -6,6 +9,7 @@ dpkg
 fatalf
 fontconfig
 fontforge
+ghcr
 gnutls
 gobin
 gomod
@@ -42,12 +46,14 @@ numfmt
 pipefail
 poppler
 prototools
+qemu
 roboto
 rumdl
 sakura
 texlive
 tlsv
 tmpl
+tonistiigi
 trixie
 tzdata
 venv

@@ -2,7 +2,7 @@ name = "typstyle"
 type = "cli"
 
 [platform.linux]
-download-file = "typstyle-{arch}-unknown-linux-musl"
+download-file = "typstyle-{arch}-unknown-linux-gnu"
 exe-path = "typstyle"
 
 [platform.macos]

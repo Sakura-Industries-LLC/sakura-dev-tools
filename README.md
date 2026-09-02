@@ -51,7 +51,11 @@ New layers go between `02-` and `zz-`; the numeric prefix is the build order, so
 
 Install `podman`, `just`, and `moon` on the host.
 
-* `just build-setup` - builds every Containerfile layer and tags the result as `sakura-dev-tools:latest`.
+* `just build-setup` - builds every Containerfile layer for the native platform and tags the result as `sakura-dev-tools:latest`.
+* `just build-setup --all` - builds `linux/amd64` and `linux/arm64`,
+  then tags the combined multi-architecture manifest as `sakura-dev-tools:latest`.
+  Cross-platform `RUN` instructions need an ARM64 binfmt/QEMU handler on the host.
+  On a trusted build host, register it with `sudo podman run --privileged --rm docker.io/tonistiigi/binfmt --install arm64`.
 * `just fix` - runs `moon run :fix` inside the container.
 * `just ci` - runs `moon run :ci` inside the container.
 * `just fix-ci` - both, in order.
@@ -62,6 +66,17 @@ Install `podman`, `just`, and `moon` on the host.
 The local-just recipes (`just local fix`, `just local ci`, `just local fix-ci`) run the moon tasks directly on the host,
 bypassing the container.
 Use them when iterating on the moon tasks themselves.
+
+## Publishing
+
+Woodpecker publishes releases for tags matching `v*`.
+The release workflow builds `linux/amd64` and `linux/arm64` through `just build-setup --all`,
+then pushes a multi-architecture manifest to both the version tag and `latest` at `ghcr.io/sakura-industries-llc/sakura-dev-tools`.
+
+The Woodpecker repository needs Trusted Security enabled for the privileged Podman build step.
+It also needs `ghcr_username` and `ghcr_token` secrets,
+where the token is a GitHub classic personal access token with `write:packages` permission.
+The workflow registers the ARM64 binfmt handler before it builds the image.
 
 ## Updating pinned versions
 
