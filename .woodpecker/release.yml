@@ -32,7 +32,6 @@ steps:
           > /etc/containers/containers.conf.d/99-woodpecker-ci.conf
       - |
         set -eu
-        export BUILDAH_ISOLATION=chroot
         export CONTAINERS_STORAGE_CONF=/tmp/woodpecker-storage.conf
         printf '%s\n' \
           '[storage]' \
