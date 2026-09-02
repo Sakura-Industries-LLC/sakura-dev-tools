@@ -25,7 +25,7 @@ steps:
     commands:
       - export DEBIAN_FRONTEND=noninteractive
       - apt-get update -q
-      - apt-get install -yq --no-install-recommends ca-certificates just nftables podman
+      - apt-get install -yq --no-install-recommends ca-certificates fuse-overlayfs just nftables podman
       - |
         mkdir -p /etc/containers/containers.conf.d
         printf '%s\n' '[containers]' 'cgroups = "disabled"' \
@@ -33,6 +33,16 @@ steps:
       - |
         set -eu
         export BUILDAH_ISOLATION=chroot
+        export CONTAINERS_STORAGE_CONF=/tmp/woodpecker-storage.conf
+        printf '%s\n' \
+          '[storage]' \
+          'driver = "overlay"' \
+          'runroot = "/run/containers/storage"' \
+          'graphroot = "/var/lib/containers/storage"' \
+          '' \
+          '[storage.options.overlay]' \
+          'mount_program = "/usr/bin/fuse-overlayfs"' \
+          > "$${CONTAINERS_STORAGE_CONF}"
         image=ghcr.io/sakura-industries-llc/sakura-dev-tools
         version="$${CI_COMMIT_TAG}"
 
