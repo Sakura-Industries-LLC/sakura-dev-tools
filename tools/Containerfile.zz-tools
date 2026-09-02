@@ -1,5 +1,7 @@
 FROM sakura-dev-tools:05-git
 
+LABEL org.opencontainers.image.source="https://github.com/Sakura-Industries-LLC/sakura-dev-tools"
+
 RUN mkdir /repo
 RUN env
 

@@ -1,0 +1,46 @@
+# Publish multi-architecture releases to the GitHub Container Registry.
+#
+# The repository must be marked trusted in Woodpecker (Settings -> Security),
+# because Podman needs a privileged build container to run the arm64 emulator.
+# Store the GitHub account name and a classic PAT with write:packages as the
+# ghcr_username and ghcr_token repository secrets. Restrict both to tag events.
+
+when:
+  - event: tag
+    ref: refs/tags/v*
+
+# Serialise releases so an older, slower build cannot overwrite latest after a
+# newer tag has already been published.
+concurrency: 1
+
+steps:
+  publish:
+    image: debian:trixie
+    privileged: true
+    environment:
+      GHCR_USERNAME:
+        from_secret: ghcr_username
+      GHCR_TOKEN:
+        from_secret: ghcr_token
+    commands:
+      - export DEBIAN_FRONTEND=noninteractive
+      - apt-get update -q
+      - apt-get install -yq --no-install-recommends just podman
+      - |
+        set -eu
+        image=ghcr.io/sakura-industries-llc/sakura-dev-tools
+        version="$${CI_COMMIT_TAG}"
+
+        # Register the ARM64 binfmt handler in the trusted, privileged runner.
+        # Podman needs it to execute Containerfile RUN instructions for arm64.
+        podman run --privileged --rm docker.io/tonistiigi/binfmt --install arm64
+
+        printf '%s' "$${GHCR_TOKEN}" | podman login ghcr.io \
+          --username "$${GHCR_USERNAME}" \
+          --password-stdin
+
+        just build-setup --all
+
+        for tag in "$${version}" latest; do
+          podman manifest push --all sakura-dev-tools:latest "docker://$${image}:$${tag}"
+        done
