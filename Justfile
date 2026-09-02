@@ -146,6 +146,7 @@ container-shell: (_container-mount "bash")
 
 # Common mounted container
 _container-mount *cmd:
+    mkdir -p .moon/podman-cache
     podman run --rm \
         -it \
         -v .:/repo:rw \
