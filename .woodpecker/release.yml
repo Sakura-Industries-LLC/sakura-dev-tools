@@ -27,7 +27,12 @@ steps:
       - apt-get update -q
       - apt-get install -yq --no-install-recommends ca-certificates just nftables podman
       - |
+        mkdir -p /etc/containers/containers.conf.d
+        printf '%s\n' '[containers]' 'cgroups = "disabled"' \
+          > /etc/containers/containers.conf.d/99-woodpecker-ci.conf
+      - |
         set -eu
+        export BUILDAH_ISOLATION=chroot
         image=ghcr.io/sakura-industries-llc/sakura-dev-tools
         version="$${CI_COMMIT_TAG}"
 
