@@ -1,7 +1,8 @@
 # Publish multi-architecture releases to the GitHub Container Registry.
 #
-# The repository must be marked trusted in Woodpecker (Settings -> Security),
-# because Podman needs a privileged build container to run the arm64 emulator.
+# The repository must have Trusted Security and Trusted Volumes enabled in
+# Woodpecker settings. Podman needs a privileged build container to run the
+# arm64 emulator, and the named volume retains its image store between releases.
 # Store the GitHub account name and a classic PAT with write:packages as the
 # ghcr_username and ghcr_token repository secrets. Restrict both to tag events.
 
@@ -17,6 +18,8 @@ steps:
   publish:
     image: debian:trixie
     privileged: true
+    volumes:
+      - sakura-dev-tools-podman:/var/lib/containers/storage
     environment:
       GHCR_USERNAME:
         from_secret: ghcr_username
