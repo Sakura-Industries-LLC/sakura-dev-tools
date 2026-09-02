@@ -120,7 +120,9 @@ _build-setup:
     podman_build -f tools/Containerfile.05-git \
         -t sakura-dev-tools:05-git .
     podman_build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest .
-    scripts/report-image-sizes.py
+    if [[ -z "${CI:-}" ]]; then
+        scripts/report-image-sizes.py
+    fi
     if [[ "${SKIP_PODMAN_PRUNE:-}" != "1" ]]; then
         echo "Cleaning up stale podman layers..."
         podman image prune --force
