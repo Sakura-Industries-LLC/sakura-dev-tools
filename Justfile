@@ -32,19 +32,6 @@ build-setup *args:
             podman manifest rm sakura-dev-tools:latest 2>/dev/null || true
             podman image rm sakura-dev-tools:latest 2>/dev/null || true
 
-            # A foreign-platform build executes Containerfile RUN commands
-            # through a kernel binfmt handler, rather than merely setting
-            # image metadata. Check it before building any image layers.
-            for platform in linux/amd64 linux/arm64; do
-                if ! podman run --rm --platform "${platform}" \
-                    docker.io/library/debian:trixie-slim true; then
-                    echo "Cannot execute ${platform} containers." >&2
-                    echo "Install a binfmt/QEMU emulator, then retry." >&2
-                    echo "For example: sudo podman run --privileged --rm docker.io/tonistiigi/binfmt --install arm64" >&2
-                    exit 1
-                fi
-            done
-
             for architecture in amd64 arm64; do
                 CONTAINER_PLATFORM="linux/${architecture}" SKIP_PODMAN_PRUNE=1 just _build-setup
                 podman tag sakura-dev-tools:latest "sakura-dev-tools:latest-${architecture}"
@@ -73,7 +60,7 @@ _build-setup:
         podman build "${podman_build_args[@]}" "$@"
     }
 
-    podman_build -f tools/Containerfile.00-base-os -t sakura-dev-tools:00-base-os \
+    podman_build --pull=always -f tools/Containerfile.00-base-os -t sakura-dev-tools:00-base-os \
         --build-arg DEBIAN_TAG .
 
     pdf2htmlex_builder_pid=
