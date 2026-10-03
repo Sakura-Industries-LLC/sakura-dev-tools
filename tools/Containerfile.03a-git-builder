@@ -28,5 +28,5 @@ RUN set -eux; \
     make configure; \
     ./configure --prefix=/opt/git; \
     make -j"$(nproc)"; \
-    make install; \
+    make install INSTALL_SYMLINKS=YesPlease; \
     rm -rf /build

@@ -106,7 +106,10 @@ _build-setup:
 
     podman_build -f tools/Containerfile.05-git \
         -t sakura-dev-tools:05-git .
-    podman_build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest .
+    podman_build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest-all .
+    # Flatten the completed image without rerunning installation or losing metadata.
+    printf 'FROM sakura-dev-tools:latest-all\n' | \
+        podman_build --pull=never --squash-all -f - -t sakura-dev-tools:latest .
     if [[ -z "${CI:-}" ]]; then
         scripts/report-image-sizes.py
     fi

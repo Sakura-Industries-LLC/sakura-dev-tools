@@ -1,11 +1,12 @@
 amd64
 arm64
-binstall
 binfmt
+binstall
 containerfile
 cyclonedx
 dotenv
 dpkg
+esac
 fatalf
 fontconfig
 fontforge

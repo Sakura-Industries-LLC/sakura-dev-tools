@@ -19,7 +19,7 @@ Everything that ends up inside the final image lives under `tools/`; everything 
 * `tools/Containerfile.03a-git-builder` - builds the pinned Git release with its build dependencies.
 * `tools/Containerfile.04-pdf2htmlex` - copies the pdf2htmlEX runtime artifacts without build dependencies.
 * `tools/Containerfile.05-git` - copies the installed Git runtime from the disposable Git builder.
-* `tools/Containerfile.zz-tools` - the final `sakura-dev-tools:latest` image, with `/repo` as the working directory.
+* `tools/Containerfile.zz-tools` - the final layered `sakura-dev-tools:latest-all` image, with `/repo` as the working directory.
 * `tools/outdated.py` - reports which pinned versions in `.env` and `.prototools` have newer upstream releases;
   supports `--update` to refresh them.
 * `tools/stage2/` - sidecar pin file for tools that `proto` cannot install safely; see its `README.md`.
@@ -51,7 +51,9 @@ New layers go between `02-` and `zz-`; the numeric prefix is the build order, so
 
 Install `podman`, `just`, and `moon` on the host.
 
-* `just build-setup` - builds every Containerfile layer for the native platform and tags the result as `sakura-dev-tools:latest`.
+* `just build-setup` - builds every Containerfile layer for the native platform as `sakura-dev-tools:latest-all`,
+  then squashes all layers into the single-layer `sakura-dev-tools:latest` image while preserving image settings.
+  The size report includes the build stages and both final images.
 * `just build-setup --all` - builds `linux/amd64` and `linux/arm64`,
   then tags the combined multi-architecture manifest as `sakura-dev-tools:latest`.
   Cross-platform `RUN` instructions need an ARM64 binfmt/QEMU handler on the host.
