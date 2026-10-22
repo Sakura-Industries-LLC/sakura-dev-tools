@@ -144,6 +144,7 @@ container-shell: (_container-mount "bash")
 _container-mount *cmd:
     mkdir -p .moon/podman-cache
     podman run --rm \
+        --network=host \
         -it \
         -v .:/repo:rw \
         -v .moon/podman-cache:/repo/.moon/cache:rw \

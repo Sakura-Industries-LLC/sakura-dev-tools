@@ -70,6 +70,10 @@ Install `podman`, `just`, and `moon` on the host.
 * `just outdated-update` - refreshes the pinned versions.
 * `just container-shell` - drops you into a bash shell inside the latest image with the repo mounted at `/repo`.
 
+The shared container launcher uses host networking, including for `just container-shell` and the check recipes.
+On Linux, this lets tools reach host services such as the ADB server on `127.0.0.1:5037`.
+Inside the container, use `adb -H 127.0.0.1 devices` to query the host's running ADB server.
+
 The local-just recipes (`just local fix`, `just local ci`, `just local fix-ci`) run the moon tasks directly on the host,
 bypassing the container.
 Use them when iterating on the moon tasks themselves.
