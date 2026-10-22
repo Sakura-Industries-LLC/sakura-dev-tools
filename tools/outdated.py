@@ -15,6 +15,7 @@ import re
 import subprocess
 import urllib.error
 import urllib.request
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -53,6 +54,12 @@ def main() -> int:
         return 1
     if not stage2_prototools_path.exists():
         console.print(f"[red]missing {stage2_prototools_path}[/red]")
+        return 1
+
+    try:
+        update_android_pins(repo_root, update=args.update)
+    except (RuntimeError, urllib.error.URLError) as error:
+        console.print(f"[red]Unable to resolve Android or Java pins:[/red] {error}")
         return 1
 
     proto_status = run_proto_outdated(update=args.update, cwd=stage2_dir)
@@ -143,6 +150,90 @@ def main() -> int:
         update=args.update,
     )
     return 0
+
+
+def update_android_pins(repo_root: Path, *, update: bool) -> None:
+    """Resolve Java 21 and stable Android packages from their publishers."""
+    java_url = "https://api.github.com/repos/adoptium/temurin21-binaries/releases/latest"
+    with urllib.request.urlopen(java_url, timeout=30) as response:
+        tag = json.load(response)["tag_name"]
+    match = re.fullmatch(r"jdk-(21\.\d+\.\d+)(?:\.(\d+))?(\+\d+)", tag)
+    if match is None:
+        raise RuntimeError(f"Unexpected Java 21 release: {tag}")
+    base, vendor, build = match.groups()
+    java_version = f"temurin-{base}{'-v' + vendor if vendor else ''}{build}"
+    prototools = repo_root / ".prototools"
+    current_java = read_prototools_version(prototools, "android")
+    console.print(f"Java 21: {current_java} -> {java_version}")
+    if update and current_java != java_version:
+        content = prototools.read_text()
+        content, count = re.subn(
+            r'^android\s*=\s*"[^"\n]+"$',
+            f'android = "{java_version}"', content, flags=re.MULTILINE,
+        )
+        if count != 1:
+            raise RuntimeError("Expected one Android Java alias in .prototools")
+        prototools.write_text(content)
+
+    with urllib.request.urlopen(
+        "https://dl.google.com/android/repository/repository2-1.xml", timeout=30,
+    ) as response:
+        root = ET.parse(response).getroot()
+    packages = {}
+    for package in root.findall("remotePackage"):
+        channel = package.find("channelRef")
+        if channel is not None and channel.get("ref") != "channel-0":
+            continue
+        revision = package.find("revision")
+        if revision is None or revision.find("preview") is not None:
+            continue
+        version = tuple(int(revision.findtext(part, "0")) for part in ("major", "minor", "micro"))
+        path = package.get("path", "")
+        if path not in packages or version > packages[path][0]:
+            packages[path] = (version, package)
+
+    def latest(prefix: str) -> str:
+        paths = [path for path in packages if path.startswith(prefix)
+                 and re.fullmatch(r"[0-9.]+", path.removeprefix(prefix))]
+        if not paths:
+            raise RuntimeError(f"No stable Android package for {prefix}")
+        return max(paths, key=lambda path: tuple(int(n) for n in path.removeprefix(prefix).split(".")))
+
+    pins = {"packages": [latest(prefix) for prefix in
+                        ("platforms;android-", "build-tools;", "ndk;")]}
+    for name, path in (("command_line_tools", latest("cmdline-tools;")),
+                       ("platform_tools", "platform-tools"), ("emulator", "emulator")):
+        version, package = packages[path]
+        archives = [a.find("complete") for a in package.findall("archives/archive")
+                    if a.findtext("host-os") == "linux"]
+        if len(archives) != 1 or archives[0] is None:
+            raise RuntimeError(f"Expected one Linux archive for {path}")
+        archive = archives[0]
+        pins[name] = {"version": ".".join(map(str, version)),
+                      "url": "https://dl.google.com/android/repository/" + archive.findtext("url"),
+                      "sha1": archive.findtext("checksum")}
+    api = pins["packages"][0].split("android-", 1)[1]
+    pins["system_image"] = f"system-images;android-{api};google_apis;x86_64"
+    # Confirm that this API has a stable emulator image before updating pins.
+    with urllib.request.urlopen(
+        "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-1.xml", timeout=30,
+    ) as response:
+        images = ET.parse(response).getroot()
+    if not any(p.get("path") == pins["system_image"] and
+               p.find("revision/preview") is None for p in images.findall("remotePackage")):
+        raise RuntimeError(f"No stable system image for Android API {api}")
+    values = {"ANDROID_PACKAGES": ",".join(pins["packages"]),
+              "ANDROID_SYSTEM_IMAGE": pins["system_image"]}
+    for name in ("command_line_tools", "platform_tools", "emulator"):
+        for key, value in pins[name].items():
+            values[f"ANDROID_{name.upper()}_{key.upper()}"] = value
+    env_path = repo_root / ".env"
+    current = read_env(env_path)
+    for key, value in values.items():
+        if current.get(key) != value:
+            console.print(f"[yellow]{key}:[/yellow] {current.get(key, '<unset>')} -> {value}")
+            if update:
+                write_env_value(env_path, key, value)
 
 
 def run_proto_outdated(*, update: bool, cwd: Path) -> int:

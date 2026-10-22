@@ -12,13 +12,15 @@ Everything that ends up inside the final image lives under `tools/`; everything 
 
 * `tools/Containerfile.00-base-os` - Debian base layer with native build dependencies.
 * `tools/Containerfile.01-proto` - installs `proto` and every tool pinned in `.prototools`.
+* `tools/Containerfile.01a-pdf2htmlex-builder` - builds the pdf2htmlEX runtime artifacts from the base OS.
 * `tools/Containerfile.02-rust` - adds a nightly Rust toolchain (for `rustfmt`) and `cargo-nextest`.
+* `tools/Containerfile.02a-git-builder` - builds the pinned Git release from the Rust layer, in parallel with Go and Android.
 * `tools/Containerfile.03-go` - Go tooling layer:
   copies `go/check_go_licenses.py` into `/root/go` so it is on `PATH` for downstream Go projects.
   `cyclonedx-gomod` itself is installed at the proto layer via `.prototools`.
-* `tools/Containerfile.03a-git-builder` - builds the pinned Git release with its build dependencies.
-* `tools/Containerfile.04-pdf2htmlex` - copies the pdf2htmlEX runtime artifacts without build dependencies.
-* `tools/Containerfile.05-git` - copies the installed Git runtime from the disposable Git builder.
+* `tools/Containerfile.04-android` - installs the Android SDK, NDK, emulator, and phone/tablet virtual devices on AMD64.
+* `tools/Containerfile.05-pdf2htmlex` - copies the pdf2htmlEX runtime artifacts without build dependencies.
+* `tools/Containerfile.06-git` - copies the installed Git runtime from the disposable Git builder.
 * `tools/Containerfile.zz-tools` - the final layered `sakura-dev-tools:latest-all` image, with `/repo` as the working directory.
 * `tools/outdated.py` - reports which pinned versions in `.env` and `.prototools` have newer upstream releases;
   supports `--update` to refresh them.
@@ -37,14 +39,18 @@ Each layer names a stage in a fixed order, and the final `zz-tools` image is wha
 | ------ | ------------------------------------------------------------------------------------- |
 | `00-`  | OS / native build dependencies (Debian).                                               |
 | `01-`  | `proto` toolchain manager and everything pinned in `.prototools`.                     |
+| `01a-` | Disposable pdf2htmlEX builder layer.                                                |
 | `02-`  | Toolchains that `proto` cannot install (currently the nightly Rust toolchain).        |
+| `02a-` | Disposable Git builder layer.                                                        |
 | `03-`  | Go tooling layer: ships `check_go_licenses.py`.                                       |
-| `03a-` | Disposable Git builder layer.                                                        |
-| `04-`  | pdf2htmlEX runtime layer.                                                           |
-| `05-`  | Clean Git runtime layer.                                                            |
+| `04-`  | Android SDK, NDK, and emulator layer (AMD64).                                         |
+| `05-`  | pdf2htmlEX runtime layer.                                                           |
+| `06-`  | Clean Git runtime layer.                                                            |
 | `zz-`  | Final aggregated image, with `/repo` prepared for downstream mounts.                  |
 
-`just build-setup` walks the layers in lexicographic order.
+`just build-setup` starts the pdf2htmlEX builder after the base OS, in parallel with the main toolchain layers.
+It starts the Git builder after Rust is installed, in parallel with Go and Android.
+After Go and Android are installed, it waits for each builder before copying its runtime artifacts into the image.
 New layers go between `02-` and `zz-`; the numeric prefix is the build order, so the final image is always last.
 
 ## Building
@@ -69,6 +75,40 @@ The local-just recipes (`just local fix`, `just local ci`, `just local fix-ci`) 
 bypassing the container.
 Use them when iterating on the moon tasks themselves.
 
+## Java and Android
+
+Java 21 (Eclipse Temurin) and Gradle are installed through `.prototools` on both image architectures.
+Gradle uses a TOML plugin that verifies the distribution checksum and installs its complete runtime.
+The image build explicitly trusts `/toolchain/.prototools` before installing its configured plugins and tools.
+The Java `android` alias records the exact Java 21 release; `just outdated-update` refreshes it within Java 21.
+`JAVA_HOME` and `GRADLE_HOME` point to the installed distributions through stable paths under `/opt`.
+Gradle projects can continue to use their own Gradle wrapper.
+
+The `linux/amd64` image also includes the Android command line tools, platform tools, SDK platform,
+build tools, NDK, emulator, and a Google APIs system image.
+Their pins live in `.env` and are resolved by `tools/outdated.py` from Google's stable package metadata.
+SDK and system image package revisions can change upstream even when their package identifiers stay the same.
+The build accepts the Android SDK licenses to install these packages.
+Google publishes the Linux native tools for x86_64, so the ARM64 image provides Java and Gradle without Android tools.
+
+`ANDROID_HOME` and `ANDROID_SDK_ROOT` point to `/opt/android-sdk`.
+`ANDROID_NDK_HOME`, `ANDROID_NDK_ROOT`, and `NDK_HOME` point to `/opt/android-ndk`.
+`ANDROID_USER_HOME` and `ANDROID_AVD_HOME` locate the configuration and virtual devices under `/root/.android`.
+The command line tools, platform tools, emulator, and NDK launchers are on `PATH`.
+
+Two virtual devices are prepared: `android-phone` (Pixel 7) and `android-tablet` (Pixel Tablet).
+They share the installed system image and have separate writable device data.
+On an AMD64 Linux host with KVM enabled, start either device with:
+
+```bash
+podman run --rm -it --device /dev/kvm sakura-dev-tools:latest \
+    emulator -avd android-phone -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+```
+
+Replace `android-phone` with `android-tablet` to start the tablet.
+The host user needs permission to access `/dev/kvm`; rootless Podman users may also need `--group-add keep-groups`.
+The regular `just container-shell` recipe does not expose KVM, so use the command above when running an emulator.
+
 ## Publishing
 
 Woodpecker publishes releases for tags matching `v*`.
@@ -82,8 +122,8 @@ The workflow registers the ARM64 binfmt handler before it builds the image.
 
 ## Updating pinned versions
 
-`tools/outdated.py` reads `.env` (for `DEBIAN_TAG`, `PROTO_VERSION`, `NEXTEST_VERSION`, and `GIT_VERSION`) and `.prototools`
-(for everything else), queries the upstream registry or release API for each, and prints what is behind.
+`tools/outdated.py` reads `.env` (including Android package pins), `.prototools`, and the sidecar pins under `tools/stage2/`.
+It queries the upstream registry or release API for each and prints what is behind.
 With `--update`, it rewrites the pin files in place.
 
 ## License

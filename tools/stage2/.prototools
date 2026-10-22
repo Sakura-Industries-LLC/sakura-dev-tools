@@ -1,2 +1,2 @@
-"cargo:cargo-nextest" = "0.9.146"
+"cargo:cargo-nextest" = "0.9.149"
 "asdf:git" = "2.56.0"
