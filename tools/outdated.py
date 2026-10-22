@@ -5,7 +5,7 @@
 #   "rich>=13.0.0",
 # ]
 # ///
-"""Check and optionally update tool versions mirrored in .env."""
+"""Check and update exact container tool pins in mise.toml and .env."""
 
 from __future__ import annotations
 
@@ -13,9 +13,11 @@ import argparse
 import json
 import re
 import subprocess
+import tomllib
 import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -26,155 +28,120 @@ console = Console()
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Check proto-managed tools and .env mirrored tool versions.",
-    )
-    parser.add_argument(
-        "--update",
-        action="store_true",
-        help=(
-            "run proto outdated --update from tools/stage2, sync .env tool "
-            "versions, and prompt for latest .env versions"
-        ),
-    )
+    parser = argparse.ArgumentParser(description="Check exact mise and image tool pins.")
+    parser.add_argument("--update", action="store_true", help="Refresh exact tool pins to their latest releases.")
     args = parser.parse_args()
-
     repo_root = Path(__file__).resolve().parent.parent
     env_path = repo_root / ".env"
+    config_path = repo_root / "mise.toml"
     secrets_path = repo_root / ".secrets"
-    prototools_path = repo_root / ".prototools"
-    stage2_dir = repo_root / "tools" / "stage2"
-    stage2_prototools_path = stage2_dir / ".prototools"
-
-    if not env_path.exists():
-        console.print(f"[red]missing {env_path}[/red]")
+    if not env_path.exists() or not config_path.exists():
+        console.print("[red]Both .env and mise.toml are required.[/red]")
         return 1
-    if not prototools_path.exists():
-        console.print(f"[red]missing {prototools_path}[/red]")
-        return 1
-    if not stage2_prototools_path.exists():
-        console.print(f"[red]missing {stage2_prototools_path}[/red]")
-        return 1
-
     try:
+        update_mise_pins(config_path, update=args.update)
         update_android_pins(repo_root, update=args.update)
-    except (RuntimeError, urllib.error.URLError) as error:
-        console.print(f"[red]Unable to resolve Android or Java pins:[/red] {error}")
-        return 1
-
-    proto_status = run_proto_outdated(update=args.update, cwd=stage2_dir)
-    if proto_status != 0:
-        return proto_status
-
-    env_values = read_env(env_path)
-    secrets = read_env(secrets_path) if secrets_path.exists() else {}
-    prototools_proto = read_prototools_version(prototools_path, "proto")
-    if prototools_proto is None:
-        console.print("[red]could not read proto version from .prototools[/red]")
-        return 1
-    stage2_nextest = read_prototools_version(
-        stage2_prototools_path,
-        "cargo:cargo-nextest",
-    )
-    if stage2_nextest is None:
-        console.print(
-            "[red]could not read cargo:cargo-nextest version from "
-            "tools/stage2/.prototools[/red]",
-        )
-        return 1
-    stage2_git = read_prototools_version(stage2_prototools_path, "asdf:git")
-    if stage2_git is None:
-        console.print(
-            "[red]could not read asdf:git version from "
-            "tools/stage2/.prototools[/red]",
-        )
-        return 1
-
-    sync_env_version(
-        env_path=env_path,
-        env_values=env_values,
-        env_key="PROTO_VERSION",
-        source_label=".prototools",
-        source_version=prototools_proto,
-        update=args.update,
-    )
-    env_values = read_env(env_path)
-    sync_env_version(
-        env_path=env_path,
-        env_values=env_values,
-        env_key="NEXTEST_VERSION",
-        source_label="tools/stage2/.prototools",
-        source_version=stage2_nextest,
-        update=args.update,
-    )
-    env_values = read_env(env_path)
-    sync_env_version(
-        env_path=env_path,
-        env_values=env_values,
-        env_key="GIT_VERSION",
-        source_label="tools/stage2/.prototools",
-        source_version=stage2_git,
-        update=args.update,
-    )
-
-    env_values = read_env(env_path)
-    current_gopls = env_values.get("GOPLS_VERSION")
-    if not current_gopls:
-        console.print("[red]GOPLS_VERSION is not set in .env[/red]")
-        return 1
-
-    try:
-        with console.status("checking latest gopls version ...", spinner="dots"):
-            latest_gopls = latest_go_module_version("golang.org/x/tools/gopls")
-
+        update_image_pins(env_path, update=args.update)
         env_values = read_env(env_path)
-        current_debian = env_values.get("DEBIAN_TAG")
-        if not current_debian:
-            console.print("[red]DEBIAN_TAG is not set in .env[/red]")
-            return 1
-
-        with console.status("checking latest Debian version ...", spinner="dots"):
-            latest_debian = latest_debian_slim_tag(current_debian, secrets=secrets)
-    except RuntimeError as error:
-        console.print(f"[red]Unable to check for updates:[/red] {error}")
-        console.print(
-            "[yellow]Check network access or Docker Hub availability, then try again.[/yellow]",
+        secrets = read_env(secrets_path) if secrets_path.exists() else {}
+        latest_gopls = latest_go_module_version("golang.org/x/tools/gopls")
+        latest_debian = latest_debian_slim_tag(env_values["DEBIAN_TAG"], secrets=secrets)
+        handle_latest_versions(
+            env_path=env_path,
+            current_debian=env_values["DEBIAN_TAG"], latest_debian=latest_debian,
+            current_gopls=env_values["GOPLS_VERSION"], latest_gopls=latest_gopls,
+            update=args.update,
         )
+    except (RuntimeError, urllib.error.URLError, subprocess.CalledProcessError) as error:
+        console.print(f"[red]Unable to check for updates:[/red] {error}")
         return 1
-    handle_latest_versions(
-        env_path=env_path,
-        current_debian=current_debian,
-        latest_debian=latest_debian,
-        current_gopls=current_gopls,
-        latest_gopls=latest_gopls,
-        update=args.update,
-    )
     return 0
 
 
-def update_android_pins(repo_root: Path, *, update: bool) -> None:
-    """Resolve Java 21 and stable Android packages from their publishers."""
-    java_url = "https://api.github.com/repos/adoptium/temurin21-binaries/releases/latest"
-    with urllib.request.urlopen(java_url, timeout=30) as response:
-        tag = json.load(response)["tag_name"]
-    match = re.fullmatch(r"jdk-(21\.\d+\.\d+)(?:\.(\d+))?(\+\d+)", tag)
-    if match is None:
-        raise RuntimeError(f"Unexpected Java 21 release: {tag}")
-    base, vendor, build = match.groups()
-    java_version = f"temurin-{base}{'-v' + vendor if vendor else ''}{build}"
-    prototools = repo_root / ".prototools"
-    current_java = read_prototools_version(prototools, "android")
-    console.print(f"Java 21: {current_java} -> {java_version}")
-    if update and current_java != java_version:
-        content = prototools.read_text()
-        content, count = re.subn(
-            r'^android\s*=\s*"[^"\n]+"$',
-            f'android = "{java_version}"', content, flags=re.MULTILINE,
-        )
-        if count != 1:
-            raise RuntimeError("Expected one Android Java alias in .prototools")
-        prototools.write_text(content)
+def exact_version(value: str) -> bool:
+    """Accept numbered releases, including Java vendor/build suffixes."""
+    return re.fullmatch(r"(?:temurin-)?[0-9]+\.[0-9]+(?:\.[0-9]+)*(?:[+.-][0-9A-Za-z.]+)?", value) is not None
 
+
+def write_mise_version(path: Path, key: str, version: str) -> None:
+    """Replace a version while retaining backend options and formatting."""
+    if not exact_version(version):
+        raise RuntimeError(f"Not an exact release for {key}: {version!r}")
+    escaped = re.escape(json.dumps(key))
+    pattern = rf'^(\s*{escaped}\s*=\s*(?:\{{\s*version\s*=\s*)?)"[^"\n]+"'
+    content, count = re.subn(pattern, lambda m: m[1] + json.dumps(version), path.read_text(), flags=re.MULTILINE)
+    if count != 1:
+        raise RuntimeError(f"Expected one pin for {key} in {path}")
+    path.write_text(content)
+
+
+def update_mise_pins(path: Path, *, update: bool) -> None:
+    """Resolve latest versions without installing tools or creating a lockfile."""
+    config = tomllib.loads(path.read_text())
+    subprocess.run(["mise", "trust", str(path)], cwd=path.parent, check=True)
+
+    def resolve(key: str) -> tuple[str, str]:
+        request = "java@temurin-21" if key == "java" else key
+        result = subprocess.check_output(["mise", "latest", request], cwd=path.parent, text=True).strip()
+        if not exact_version(result):
+            raise RuntimeError(f"Invalid release returned for {key}: {result!r}")
+        if key == "java" and not result.startswith("temurin-21."):
+            raise RuntimeError(f"Refusing to upgrade Java beyond 21: {result}")
+        return key, result
+
+    # Resolve independently; write the pin file only from the main thread.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        versions = list(pool.map(resolve, config["tools"]))
+    for key, latest in versions:
+        pin = config["tools"][key]
+        current = pin["version"] if isinstance(pin, dict) else pin
+        if not exact_version(current):
+            raise RuntimeError(f"Expected an exact pin for {key}: {current}")
+        # A publisher may mark an older maintenance release as its latest.
+        newer = tuple(map(int, re.findall(r"\d+", latest))) > tuple(map(int, re.findall(r"\d+", current)))
+        if latest != current and not newer:
+            console.print(f"{key}: retaining {current}; publisher latest is older ({latest})")
+            continue
+        console.print(f"{key}: {current} -> {latest}")
+        if update and newer:
+            write_mise_version(path, key, latest)
+
+
+def latest_github_release(repository: str) -> str:
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{repository}/releases/latest",
+        headers={"User-Agent": "sakura-dev-tools"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)["tag_name"].removeprefix("v")
+
+
+def update_image_pins(env_path: Path, *, update: bool) -> None:
+    """Resolve tools installed by dedicated image stages from their upstreams."""
+    with urllib.request.urlopen("https://crates.io/api/v1/crates/cargo-nextest", timeout=30) as response:
+        nextest = json.load(response)["crate"]["max_stable_version"]
+    # Git has numbered tags but does not publish GitHub release objects.
+    tags = subprocess.check_output(
+        ["git", "ls-remote", "--tags", "--refs", "https://github.com/git/git.git"], text=True,
+    )
+    git_versions = re.findall(r"refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$", tags, re.MULTILINE)
+    if not git_versions:
+        raise RuntimeError("No stable Git tags found")
+    git = max(git_versions, key=lambda version: tuple(map(int, version.split("."))))
+    with urllib.request.urlopen("https://static.rust-lang.org/dist/channel-rust-nightly.toml", timeout=30) as response:
+        nightly = "nightly-" + tomllib.loads(response.read().decode())["date"]
+    values = {"MISE_VERSION": latest_github_release("jdx/mise"),
+              "NEXTEST_VERSION": nextest, "GIT_VERSION": git,
+              "RUST_NIGHTLY_VERSION": nightly}
+    current = read_env(env_path)
+    for key, value in values.items():
+        console.print(f"{key}: {current.get(key, '<unset>')} -> {value}")
+        if update and current.get(key) != value:
+            write_env_value(env_path, key, value)
+
+
+def update_android_pins(repo_root: Path, *, update: bool) -> None:
+    """Resolve stable Android packages from Google repository metadata."""
     with urllib.request.urlopen(
         "https://dl.google.com/android/repository/repository2-1.xml", timeout=30,
     ) as response:
@@ -236,15 +203,6 @@ def update_android_pins(repo_root: Path, *, update: bool) -> None:
                 write_env_value(env_path, key, value)
 
 
-def run_proto_outdated(*, update: bool, cwd: Path) -> int:
-    """Run proto's own outdated workflow, preserving interactivity."""
-    command = ["proto", "outdated", "--reporter", "text"]
-    if update:
-        command.append("--update")
-        command.append("--latest")
-    return subprocess.run(command, cwd=cwd, check=False).returncode
-
-
 def read_env(path: Path) -> dict[str, str]:
     """Read simple KEY=VALUE assignments from .env."""
     values: dict[str, str] = {}
@@ -273,45 +231,6 @@ def write_env_value(path: Path, key: str, value: str) -> None:
         output.append(f"{key}={value}")
 
     path.write_text("\n".join(output) + "\n")
-
-
-def read_prototools_version(path: Path, key: str) -> str | None:
-    """Read one bare or quoted tool version assignment from .prototools."""
-    escaped_key = re.escape(key)
-    pattern = re.compile(rf'^(?:"{escaped_key}"|{escaped_key})\s*=\s*"([^"]+)"\s*$')
-    for line in path.read_text().splitlines():
-        match = pattern.match(line)
-        if match:
-            return match.group(1)
-    return None
-
-
-def sync_env_version(
-    *,
-    env_path: Path,
-    env_values: dict[str, str],
-    env_key: str,
-    source_label: str,
-    source_version: str,
-    update: bool,
-) -> None:
-    """Report or sync one .env version mirror against its source."""
-    env_version = env_values.get(env_key)
-    if env_version == source_version:
-        console.print(f"[green]{env_key} is synced:[/green] {env_version}")
-        return
-
-    if update:
-        write_env_value(env_path, env_key, source_version)
-        console.print(
-            f"[green]synced {env_key}:[/green] "
-            f"{env_version or '<unset>'} -> {source_version}",
-        )
-        return
-
-    console.print(f"[yellow]{env_key} differs from {source_label}:[/yellow]")
-    console.print(f"  current: {env_version or '<unset>'}")
-    console.print(f"  could be: {source_version}")
 
 
 def latest_go_module_version(module: str) -> str:

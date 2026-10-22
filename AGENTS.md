@@ -22,8 +22,8 @@ There is no application code, no language workspace, and no specs.
 The image is built in named stages with a numeric prefix that controls build order.
 
 * `00-` - OS / native build dependencies (Debian).
-* `01-` - `proto` toolchain manager and every pin in `.prototools`.
-* `02-` - toolchains that `proto` cannot install (currently the nightly Rust toolchain).
+* `01-` - `mise` toolchain manager and every pin in `mise.toml`.
+* `02-` - dedicated Rust nightly and cargo-nextest layer.
 * `zz-` - the final aggregated image; this is what downstream projects mount.
 
 `just build-setup` walks the layers in lexicographic order.
@@ -34,8 +34,11 @@ Each Containerfile should `FROM` the previous stage so the build cache is shared
 
 Two files hold the pin set, and they are the single source of truth.
 
-* `.env` - `DEBIAN_TAG`, `PROTO_VERSION`, `NEXTEST_VERSION`, and `GIT_VERSION` (consumed by `just build-setup` as `--build-arg`).
-* `.prototools` - every other tool the image provides.
+* `.env` - `DEBIAN_TAG`, `MISE_VERSION`, `RUST_NIGHTLY_VERSION`, `NEXTEST_VERSION`, and `GIT_VERSION`
+  (consumed by `just build-setup` as `--build-arg`).
+* `mise.toml` - every tool installed by mise, using exact release versions.
+* Tools run from a static image `PATH` through filesystem links; do not add mise shims or shell activation.
+* Do not add a mise lockfile or floating version requests.
 
 Use `just outdated` to see what is behind, and `just outdated-update` to refresh.
 Do not hand-edit a pin to a version that `outdated.py` does not know how to resolve.
@@ -54,7 +57,7 @@ Do NOT run `moon` directly, Do Not use any `just local` targets as they are excl
 
 ## `tools/outdated.py`
 
-A small Python utility that reports stale pins in `.env`, `.prototools`, and the sidecar pin file under `tools/stage2/`.
+A small Python utility that reports stale pins in `.env` and `mise.toml`.
 It is the only place that knows how to translate a "latest" release back into a pin entry; do not duplicate that logic elsewhere.
 
 ## Documentation

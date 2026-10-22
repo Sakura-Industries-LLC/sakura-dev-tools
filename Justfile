@@ -84,10 +84,10 @@ _build-setup:
         --build-arg PDF2HTMLEX_COMMIT . &
     pdf2htmlex_builder_pid=$!
 
-    podman_build -f tools/Containerfile.01-proto -t sakura-dev-tools:01-proto \
-        --build-arg PROTO_VERSION .
+    podman_build -f tools/Containerfile.01-mise -t sakura-dev-tools:01-mise \
+        --build-arg MISE_VERSION .
     podman_build -f tools/Containerfile.02-rust -t sakura-dev-tools:02-rust \
-        --build-arg NEXTEST_VERSION .
+        --build-arg NEXTEST_VERSION --build-arg RUST_NIGHTLY_VERSION .
     podman_build -f tools/Containerfile.02a-git-builder \
         -t sakura-dev-tools:02a-git-builder \
         --build-arg GIT_VERSION . &
