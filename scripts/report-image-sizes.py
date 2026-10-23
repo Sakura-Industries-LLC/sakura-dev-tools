@@ -5,7 +5,7 @@
 #   "rich>=13.0.0",
 # ]
 # ///
-"""Report the sizes of the sakura-dev-tools image layers."""
+"""Report the sizes of the sakura-dev-tools stages and final images."""
 
 from __future__ import annotations
 
@@ -42,7 +42,9 @@ class ImageSize:
 
 def main() -> int:
     images = find_images()
-    if not images:
+    layered = find_latest("latest-all")
+    latest = find_latest()
+    if not images and layered is None and latest is None:
         Console().print("[yellow]No sakura-dev-tools images found.[/yellow]")
         return 0
 
@@ -72,23 +74,21 @@ def main() -> int:
         if non_builder_sizes:
             previous_non_builder_size = max(non_builder_sizes)
 
-    latest = find_latest()
-    if latest is not None:
-        parent_size = max(image.size for image in images)
+    if layered is not None:
         table.add_row(
-            "sakura-dev-tools:latest",
-            format_size(latest - parent_size),
-            format_size(latest),
-            "final",
+            f"{IMAGE_PREFIX}latest-all",
+            format_size(layered - previous_non_builder_size),
+            format_size(layered),
+            "layered",
         )
 
     table.add_section()
     if latest is not None:
         table.add_row(
-            "Cumulative final image",
+            f"{IMAGE_PREFIX}latest",
             "",
             format_size(latest),
-            "",
+            "squashed",
         )
     Console().print(table)
     return 0
@@ -115,8 +115,8 @@ def image_groups(images: list[ImageSize]) -> list[list[ImageSize]]:
     return groups
 
 
-def find_latest() -> int | None:
-    reference = f"{IMAGE_PREFIX}latest"
+def find_latest(name: str = "latest") -> int | None:
+    reference = f"{IMAGE_PREFIX}{name}"
     return inspect_size(reference) if reference in podman_references() else None
 
 

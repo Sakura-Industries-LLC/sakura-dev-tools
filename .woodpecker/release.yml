@@ -59,5 +59,7 @@ steps:
         just build-setup --all
 
         for tag in "$${version}" latest; do
-          podman manifest push --all sakura-dev-tools:latest "docker://$${image}:$${tag}"
+          podman manifest push --all --format oci \
+            --compression-format zstd --compression-level 3 \
+            sakura-dev-tools:latest "docker://$${image}:$${tag}"
         done

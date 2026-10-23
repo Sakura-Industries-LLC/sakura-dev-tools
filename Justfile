@@ -84,29 +84,36 @@ _build-setup:
         --build-arg PDF2HTMLEX_COMMIT . &
     pdf2htmlex_builder_pid=$!
 
-    podman_build -f tools/Containerfile.01-proto -t sakura-dev-tools:01-proto \
-        --build-arg PROTO_VERSION .
+    podman_build -f tools/Containerfile.01-mise -t sakura-dev-tools:01-mise \
+        --build-arg MISE_VERSION .
     podman_build -f tools/Containerfile.02-rust -t sakura-dev-tools:02-rust \
-        --build-arg NEXTEST_VERSION .
+        --build-arg NEXTEST_VERSION --build-arg RUST_NIGHTLY_VERSION .
+    podman_build -f tools/Containerfile.02a-git-builder \
+        -t sakura-dev-tools:02a-git-builder \
+        --build-arg GIT_VERSION . &
+    git_builder_pid=$!
+
     podman_build -f tools/Containerfile.03-go -t sakura-dev-tools:03-go \
         --build-arg GOPLS_VERSION .
-    podman_build -f tools/Containerfile.03a-git-builder \
-        -t sakura-dev-tools:03a-git-builder \
-        --build-arg GIT_VERSION .
-    git_builder_pid=$!
+
+    podman_build -f tools/Containerfile.04-android \
+        -t sakura-dev-tools:04-android .
 
     wait "${pdf2htmlex_builder_pid}"
     pdf2htmlex_builder_pid=
 
-    podman_build -f tools/Containerfile.04-pdf2htmlex \
-        -t sakura-dev-tools:04-pdf2htmlex .
+    podman_build -f tools/Containerfile.05-pdf2htmlex \
+        -t sakura-dev-tools:05-pdf2htmlex .
 
     wait "${git_builder_pid}"
     git_builder_pid=
 
-    podman_build -f tools/Containerfile.05-git \
-        -t sakura-dev-tools:05-git .
-    podman_build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest .
+    podman_build -f tools/Containerfile.06-git \
+        -t sakura-dev-tools:06-git .
+    podman_build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest-all .
+    # Flatten the completed image without rerunning installation or losing metadata.
+    printf 'FROM sakura-dev-tools:latest-all\n' | \
+        podman_build --pull=never --squash-all -f - -t sakura-dev-tools:latest .
     if [[ -z "${CI:-}" ]]; then
         scripts/report-image-sizes.py
     fi
@@ -137,6 +144,7 @@ container-shell: (_container-mount "bash")
 _container-mount *cmd:
     mkdir -p .moon/podman-cache
     podman run --rm \
+        --network=host \
         -it \
         -v .:/repo:rw \
         -v .moon/podman-cache:/repo/.moon/cache:rw \

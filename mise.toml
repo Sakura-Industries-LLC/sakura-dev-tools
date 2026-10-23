@@ -1,0 +1,42 @@
+# Exact tool versions for the container. Refresh with just outdated-update.
+[tools]
+"java" = "temurin-21.0.12+101.0.LTS"
+"aqua:gradle/gradle-distributions" = "9.8.2"
+"aqua:casey/just" = "1.59.0"
+"github:moonrepo/moon" = { version = "2.6.3", matching = "moon_cli-", rename_exe = "moon" }
+"github:git-lfs/git-lfs" = { version = "3.8.0", strip_components = 1, bin_path = ".", matching = "linux-", filter_bins = "git-lfs" }
+"aqua:rvben/rumdl" = "0.3.0"
+"node" = "26.12.1"
+"npm:npm" = "12.2.1"
+"rust" = { version = "1.99.1", profile = "default" }
+"go" = "1.27.3"
+"aqua:golangci/golangci-lint" = "2.15.0"
+"aqua:vektra/mockery" = "3.8.1"
+"github:CycloneDX/cyclonedx-gomod" = "1.12.0"
+"github:quarto-dev/quarto-cli" = { version = "1.11.6", strip_components = 1, bin_path = "bin", matching = "linux-" }
+"github:jgm/pandoc" = { version = "3.10", strip_components = 1, bin_path = "bin", matching = "linux-" }
+"aqua:typst/typst" = "0.15.1"
+"aqua:typstyle-rs/typstyle" = "0.15.2"
+"aqua:Myriad-Dreamin/tinymist" = "0.15.10"
+"github:ewhauser/shuck" = { version = "0.2.7", matching = "shuck-cli-" }
+"python" = "3.15.1"
+"zig" = "0.15.2"
+"aqua:opentofu/opentofu" = "1.13.2"
+"aqua:zellij-org/zellij" = "0.45.1"
+"aqua:max-sixty/worktrunk" = "0.81.0"
+"npm:cspell" = "10.4.0"
+"npm:oxlint" = "1.89.0"
+"npm:oxfmt" = "0.74.0"
+"npm:tree-sitter-cli" = "0.27.1"
+"npm:typescript-language-server" = "6.0.2"
+"npm:yaml-language-server" = "2.0.0"
+"aqua:cargo-bins/cargo-binstall" = "1.26.0"
+"aqua:EmbarkStudios/cargo-deny" = "0.20.2"
+"aqua:astral-sh/ruff" = "0.17.1"
+"aqua:astral-sh/uv" = "0.13.5"
+"aqua:astral-sh/ty" = "0.0.90"
+
+[settings]
+lockfile = false
+auto_install = false
+activate_shims = false

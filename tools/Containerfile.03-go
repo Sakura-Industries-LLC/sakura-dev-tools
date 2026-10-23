@@ -1,6 +1,6 @@
 FROM sakura-dev-tools:02-rust
 
-ENV GOBIN=/root/.proto/bin
+ENV GOBIN=/usr/local/bin
 ENV PATH="/root/go:$PATH"
 
 ARG GOPLS_VERSION

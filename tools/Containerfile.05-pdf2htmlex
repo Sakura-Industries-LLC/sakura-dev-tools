@@ -1,4 +1,4 @@
-FROM sakura-dev-tools:03-go
+FROM sakura-dev-tools:04-android
 
 COPY --from=sakura-dev-tools:01a-pdf2htmlex-builder \
     /artifacts/bin/pdf2htmlEX \

@@ -1,9 +1,9 @@
-FROM sakura-dev-tools:04-pdf2htmlex
+FROM sakura-dev-tools:05-pdf2htmlex
 
 # Git records its configured prefix in the executable, including for git-core
 # helpers and templates used by commands such as `git init`.  Preserve that
 # prefix instead of relocating selected directories into `/usr/local`.
-COPY --from=sakura-dev-tools:03a-git-builder \
+COPY --from=sakura-dev-tools:02a-git-builder \
     /opt/git/ \
     /opt/git/
 

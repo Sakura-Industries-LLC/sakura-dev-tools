@@ -1,0 +1,57 @@
+FROM sakura-dev-tools:00-base-os
+
+ARG MISE_VERSION
+
+ENV MISE_DATA_DIR=/opt/mise
+ENV MISE_CACHE_DIR=/tmp/mise-cache
+ENV MISE_STATE_DIR=/opt/mise/state
+ENV MISE_CONFIG_DIR=/opt/mise/config
+ENV MISE_LOCKFILE=false
+ENV MISE_AUTO_INSTALL=false
+ENV MISE_ACTIVATE_SHIMS=false
+ENV MOON_TOOLCHAIN_FORCE_GLOBALS=true
+ENV CARGO_HOME=/root/.cargo
+ENV RUSTUP_HOME=/root/.rustup
+ENV PATH="/usr/local/bin:/opt/toolchain/bin:$CARGO_HOME/bin:$PATH"
+
+COPY mise.toml /toolchain/
+COPY tools/expose-tools.py /toolchain/
+
+# Bootstrap a pinned mise, then install every exact tool pin without runtime shims.
+RUN set -eux; \
+    case "$(dpkg --print-architecture)" in \
+        amd64) architecture=x64 ;; \
+        arm64) architecture=arm64 ;; \
+        *) echo 'Unsupported mise architecture' >&2; exit 1 ;; \
+    esac; \
+    download_dir="$(mktemp -d)"; \
+    release="https://github.com/jdx/mise/releases/download/v${MISE_VERSION}"; \
+    curl --fail --location --retry 3 \
+        "$release/mise-v${MISE_VERSION}-linux-${architecture}.tar.xz" \
+        --output "$download_dir/mise-v${MISE_VERSION}-linux-${architecture}.tar.xz"; \
+    curl --fail --location --retry 3 "$release/SHASUMS256.txt" \
+        --output "$download_dir/SHASUMS256.txt"; \
+    (cd "$download_dir" && sha256sum --check --ignore-missing SHASUMS256.txt); \
+    tar -xJf "$download_dir/mise-v${MISE_VERSION}-linux-${architecture}.tar.xz" \
+        -C /usr/local --strip-components=1 mise/bin/mise; \
+    rm -rf "$download_dir"; \
+    mise trust /toolchain/mise.toml; \
+    for attempt in 1 2 3; do \
+        if mise install --yes; then \
+            break; \
+        else \
+            status=$?; \
+            if [ "$attempt" -eq 3 ]; then exit "$status"; fi; \
+            echo "mise install failed (attempt $attempt/3); retrying..." >&2; \
+            sleep "$((attempt * 5))"; \
+        fi; \
+    done; \
+    python3 /toolchain/expose-tools.py; \
+    rustup default "$(python3 -c 'import tomllib; print(tomllib.load(open("mise.toml", "rb"))["tools"]["rust"]["version"])')"; \
+    npm config set prefix /usr/local; \
+    rm -rf "$MISE_CACHE_DIR"; \
+    find /root /opt/mise -type f -iname '*.log' -delete
+
+ENV JAVA_HOME=/opt/toolchain/java
+ENV GRADLE_HOME=/opt/toolchain/gradle
+ENV GOROOT=/opt/toolchain/go
