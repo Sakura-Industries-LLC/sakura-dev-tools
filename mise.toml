@@ -11,6 +11,7 @@
 "rust" = { version = "1.99.1", profile = "default" }
 "go" = "1.27.3"
 "aqua:golangci/golangci-lint" = "2.15.0"
+"aqua:vektra/mockery" = "3.8.1"
 "github:CycloneDX/cyclonedx-gomod" = "1.12.0"
 "github:quarto-dev/quarto-cli" = { version = "1.11.6", strip_components = 1, bin_path = "bin", matching = "linux-" }
 "github:jgm/pandoc" = { version = "3.10", strip_components = 1, bin_path = "bin", matching = "linux-" }
