@@ -43,6 +43,7 @@ RUN set -eux; \
         liblzma-dev \
         libncursesw5-dev \
         libnss3 \
+        libnss3-tools \
         libpango-1.0-0 \
         libpangoft2-1.0-0 \
         libpcre2-dev \
