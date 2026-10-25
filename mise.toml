@@ -14,6 +14,9 @@
 "aqua:vektra/mockery" = "3.8.1"
 "github:CycloneDX/cyclonedx-gomod" = "1.12.0"
 "github:quarto-dev/quarto-cli" = { version = "1.11.6", strip_components = 1, bin_path = "bin", matching = "linux-" }
+"aqua:gohugoio/hugo" = "0.168.0"
+"aqua:sass/dart-sass" = "1.106.1"
+"aqua:getzola/zola" = "0.23.6"
 "github:jgm/pandoc" = { version = "3.10", strip_components = 1, bin_path = "bin", matching = "linux-" }
 "aqua:typst/typst" = "0.15.1"
 "aqua:typstyle-rs/typstyle" = "0.15.2"
@@ -35,6 +38,14 @@
 "aqua:astral-sh/ruff" = "0.17.1"
 "aqua:astral-sh/uv" = "0.13.5"
 "aqua:astral-sh/ty" = "0.0.90"
+
+# The Wails CLI is a pure-Go build tool, but with cgo enabled its Linux build
+# compiles an optional WebKit version probe that needs the GTK4 and WebKitGTK
+# 6.0 development packages. Installing it without cgo keeps this tool
+# installable everywhere, including the Linux CI agent, which has no GTK.
+# Building the desktop application on Linux still needs those packages; the
+# `linux:build` task checks for them.
+"go:github.com/wailsapp/wails/v3/cmd/wails3" = { version = "3.0.0-beta.16", os = ["macos", "linux"], install_env = { CGO_ENABLED = "0" } }
 
 [settings]
 lockfile = false

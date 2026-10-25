@@ -17,9 +17,11 @@ fatalf
 fontconfig
 fontforge
 foojay
+getzola
 ghcr
 gnutls
 gobin
+gohugoio
 golangci
 gomod
 gopls
@@ -106,3 +108,4 @@ vektra
 venv
 worktrunk
 zellij
+zola

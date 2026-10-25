@@ -24,7 +24,11 @@ def main() -> None:
     for tool, pin in config["tools"].items():
         expected = pin["version"] if isinstance(pin, dict) else pin
         records = installed.get(tool, [])
-        if not any(record["installed"] and record["version"] == expected for record in records):
+        # Go module pins may include a v prefix that mise removes when installing.
+        if not any(
+            record["installed"] and record["version"].removeprefix("v") == expected.removeprefix("v")
+            for record in records
+        ):
             raise RuntimeError(f"Expected exact installed version {tool}@{expected}")
     data = Path(os.environ["MISE_DATA_DIR"]).resolve()
     environment = json.loads(mise("env", "--json"))
