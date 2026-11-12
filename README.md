@@ -120,6 +120,24 @@ Replace `android-phone` with `android-tablet` to start the tablet.
 The host user needs permission to access `/dev/kvm`; rootless Podman users may also need `--group-add keep-groups`.
 The regular `just container-shell` recipe does not expose KVM, so use the command above when running an emulator.
 
+## Rendering draw.io diagrams
+
+The image includes the official draw.io desktop CLI, pinned by `DRAWIO_VERSION` in `.env`.
+The `drawio` command starts a virtual display automatically, so exports work without a desktop session.
+Inside the container, export a source diagram with:
+
+```bash
+drawio --export --format png --scale 2 --output diagram.png diagram.drawio
+drawio --export --format svg --output diagram.svg diagram.drawio
+drawio --export --format pdf --output diagram.pdf diagram.drawio
+```
+
+JPEG export is also available with `--format jpg`; `drawio --help` lists the export options.
+The renderer uses bundled draw.io assets; diagrams referencing remote images may still require network access.
+The wrapper adds `--no-sandbox` when running as root, as required by Electron in this container.
+Render trusted diagram sources.
+`just outdated-update` refreshes the desktop release pin alongside the other tool versions.
+
 ## Publishing
 
 Woodpecker publishes releases for tags matching `v*`.

@@ -10,6 +10,7 @@ containerfile
 cyclonedx
 dotenv
 dpkg
+drawio
 dreamin
 esac
 ewhauser
@@ -33,6 +34,7 @@ htmlex
 ifdef
 javac
 jdk
+jgraph
 kvm
 ldconfig
 libasound
@@ -45,6 +47,7 @@ libdbus
 libegl
 libexec
 libexpat
+libgbm
 libgdbm
 libgl
 libharfbuzz
@@ -109,5 +112,7 @@ vektra
 venv
 wailsapp
 worktrunk
+xauth
+xvfb
 zellij
 zola

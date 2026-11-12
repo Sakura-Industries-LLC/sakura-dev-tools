@@ -131,6 +131,7 @@ def update_image_pins(env_path: Path, *, update: bool) -> None:
     with urllib.request.urlopen("https://static.rust-lang.org/dist/channel-rust-nightly.toml", timeout=30) as response:
         nightly = "nightly-" + tomllib.loads(response.read().decode())["date"]
     values = {"MISE_VERSION": latest_github_release("jdx/mise"),
+              "DRAWIO_VERSION": latest_github_release("jgraph/drawio-desktop"),
               "NEXTEST_VERSION": nextest, "GIT_VERSION": git,
               "RUST_NIGHTLY_VERSION": nightly}
     current = read_env(env_path)

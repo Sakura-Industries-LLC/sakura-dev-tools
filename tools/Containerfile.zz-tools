@@ -2,6 +2,23 @@ FROM sakura-dev-tools:06-git
 
 LABEL org.opencontainers.image.source="https://github.com/Sakura-Industries-LLC/sakura-dev-tools"
 
+ARG DRAWIO_VERSION
+
+# Use the desktop exporter offline, with a virtual display for Electron.
+# Keep this installation late so renderer updates preserve the toolchain cache.
+RUN set -eux; \
+    architecture="$(dpkg --print-architecture)"; \
+    case "$architecture" in amd64|arm64) ;; *) exit 1 ;; esac; \
+    curl --fail --location --retry 3 \
+        "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-${architecture}-${DRAWIO_VERSION}.deb" \
+        --output /tmp/drawio.deb; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends /tmp/drawio.deb xvfb xauth libgbm1; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/* /tmp/drawio.deb
+
+COPY --chmod=755 tools/drawio.sh /usr/local/bin/drawio
+
 RUN mkdir /repo
 RUN env
 
