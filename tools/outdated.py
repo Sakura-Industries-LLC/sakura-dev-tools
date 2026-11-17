@@ -88,6 +88,11 @@ def update_mise_pins(path: Path, *, update: bool) -> None:
             return key, None
         if not exact_version(result):
             raise RuntimeError(f"Invalid release returned for {key}: {result!r}")
+        # The recovery release was signed from the wrong tag; keep verification enabled.
+        # https://github.com/max-sixty/worktrunk/issues/4829
+        if key == "aqua:max-sixty/worktrunk" and result == "0.82.0":
+            console.print(f"{key}: skipping {result}; upstream signing identity mismatch (issue #4829)")
+            return key, None
         if key == "java" and not result.startswith("temurin-21."):
             raise RuntimeError(f"Refusing to upgrade Java beyond 21: {result}")
         return key, result
@@ -101,7 +106,7 @@ def update_mise_pins(path: Path, *, update: bool) -> None:
         if not exact_version(current):
             raise RuntimeError(f"Expected an exact pin for {key}: {current}")
         if latest is None:
-            console.print(f"{key}: retaining {current}; mise returned no eligible release (check minimum_release_age)")
+            console.print(f"{key}: retaining {current}; no eligible release (check minimum_release_age or skipped releases)")
             continue
         # A publisher may mark an older maintenance release as its latest.
         newer = tuple(map(int, re.findall(r"\d+", latest))) > tuple(map(int, re.findall(r"\d+", current)))

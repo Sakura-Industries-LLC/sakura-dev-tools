@@ -30,7 +30,8 @@
 "zig" = "0.17.1"
 "aqua:opentofu/opentofu" = "1.13.9"
 "aqua:zellij-org/zellij" = "0.46.0"
-"aqua:max-sixty/worktrunk" = "0.82.0"
+# 0.82.0 has a mismatched signing identity; tools/outdated.py skips that release.
+"aqua:max-sixty/worktrunk" = "0.81.0"
 "npm:cspell" = "10.5.1"
 "npm:oxlint" = "1.93.0"
 "npm:oxfmt" = "0.78.0"
