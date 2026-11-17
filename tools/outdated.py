@@ -80,9 +80,12 @@ def update_mise_pins(path: Path, *, update: bool) -> None:
     config = tomllib.loads(path.read_text())
     subprocess.run(["mise", "trust", str(path)], cwd=path.parent, check=True)
 
-    def resolve(key: str) -> tuple[str, str]:
+    def resolve(key: str) -> tuple[str, str | None]:
         request = "java@temurin-21" if key == "java" else key
         result = subprocess.check_output(["mise", "latest", request], cwd=path.parent, text=True).strip()
+        # Mise can succeed without a version when all releases are too recent.
+        if not result:
+            return key, None
         if not exact_version(result):
             raise RuntimeError(f"Invalid release returned for {key}: {result!r}")
         if key == "java" and not result.startswith("temurin-21."):
@@ -97,6 +100,9 @@ def update_mise_pins(path: Path, *, update: bool) -> None:
         current = pin["version"] if isinstance(pin, dict) else pin
         if not exact_version(current):
             raise RuntimeError(f"Expected an exact pin for {key}: {current}")
+        if latest is None:
+            console.print(f"{key}: retaining {current}; mise returned no eligible release (check minimum_release_age)")
+            continue
         # A publisher may mark an older maintenance release as its latest.
         newer = tuple(map(int, re.findall(r"\d+", latest))) > tuple(map(int, re.findall(r"\d+", current)))
         if latest != current and not newer:
