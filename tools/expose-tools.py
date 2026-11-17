@@ -4,6 +4,7 @@
 import argparse
 import json
 import os
+import platform
 from pathlib import Path
 import subprocess
 import tomllib
@@ -21,7 +22,22 @@ def main() -> None:
     binaries.mkdir(parents=True, exist_ok=True)
     config = tomllib.loads(Path("mise.toml").read_text())
     installed = json.loads(mise("ls", "--current", "--json"))
+    system = {"Darwin": "macos", "Windows": "windows"}.get(platform.system(), platform.system().lower())
+    machine = platform.machine().lower()
+    architecture = {"x86_64": "x64", "amd64": "x64", "aarch64": "arm64"}.get(machine, machine)
     for tool, pin in config["tools"].items():
+        if isinstance(pin, dict) and "os" in pin:
+            # Match mise's OS/architecture restrictions before requiring a pin.
+            supported = False
+            for target in pin["os"]:
+                target_os, _, target_arch = target.partition("/")
+                target_os = {"darwin": "macos", "win": "windows"}.get(target_os, target_os)
+                target_arch = {"x86_64": "x64", "amd64": "x64", "aarch64": "arm64"}.get(target_arch, target_arch)
+                supported |= (target_os == system or target_os == "unix" and system != "windows") and (
+                    not target_arch or target_arch == architecture
+                )
+            if not supported:
+                continue
         expected = pin["version"] if isinstance(pin, dict) else pin
         records = installed.get(tool, [])
         # Go module pins may include a v prefix that mise removes when installing.

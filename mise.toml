@@ -5,6 +5,9 @@
 "aqua:casey/just" = "1.59.0"
 "github:moonrepo/moon" = { version = "2.6.5", matching = "moon_cli-", rename_exe = "moon" }
 "github:git-lfs/git-lfs" = { version = "3.8.1", strip_components = 1, bin_path = ".", matching = "linux-", filter_bins = "git-lfs" }
+# Kizz's tracer supports only Linux x86_64.
+"github:Sakura-Industries-LLC/kizz" = { version = "0.0.1", os = ["linux/x64"], strip_components = 1, bin_path = ".", filter_bins = "kizz" }
+"github:Sakura-Industries-LLC/CBORK" = { version = "0.0.20", strip_components = 1, bin_path = ".", filter_bins = "cbork" }
 "aqua:rvben/rumdl" = "0.3.3"
 "node" = "26.13.1"
 "npm:npm" = "12.2.2"

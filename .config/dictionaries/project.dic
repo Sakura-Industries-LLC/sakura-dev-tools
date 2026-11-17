@@ -5,6 +5,7 @@ avd
 avdmanager
 binfmt
 binstall
+cbork
 cmdline
 containerfile
 cyclonedx
@@ -35,6 +36,7 @@ ifdef
 javac
 jdk
 jgraph
+kizz
 kvm
 ldconfig
 libasound
