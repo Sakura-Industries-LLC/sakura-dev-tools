@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import tomllib
 import urllib.error
@@ -47,9 +48,10 @@ def main() -> int:
         console.print("[red]Both .env and mise.toml are required.[/red]")
         return 1
     try:
-        update_mise_pins(config_path, update=args.update)
+        github_token = get_github_token()
+        update_mise_pins(config_path, update=args.update, github_token=github_token)
         update_android_pins(repo_root, update=args.update)
-        update_image_pins(env_path, update=args.update)
+        update_image_pins(env_path, update=args.update, github_token=github_token)
         env_values = read_env(env_path)
         secrets = read_env(secrets_path) if secrets_path.exists() else {}
         latest_gopls = latest_go_module_version("golang.org/x/tools/gopls")
@@ -83,13 +85,31 @@ def write_mise_version(path: Path, key: str, version: str) -> None:
     path.write_text(content)
 
 
-def update_mise_pins(path: Path, *, update: bool) -> None:
+def get_github_token() -> str | None:
+    """Read an explicit token or ask gh for the active github.com login."""
+    for name in ("MISE_GITHUB_TOKEN", "GITHUB_API_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"):
+        if token := os.environ.get(name, "").strip():
+            return token
+    if shutil.which("gh") is None:
+        return None
+    result = subprocess.run(
+        ["gh", "auth", "token", "--hostname", "github.com"],
+        capture_output=True, text=True, check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def update_mise_pins(path: Path, *, update: bool, github_token: str | None = None) -> None:
     """Resolve latest versions without installing tools or creating a lockfile."""
     config = tomllib.loads(path.read_text())
     subprocess.run(["mise", "trust", str(path)], cwd=path.parent, check=True)
     # Update checks need fresh upstream releases, not mise's cached snapshots.
     lookup_env = {**os.environ, "MISE_USE_VERSIONS_HOST": "false",
                   "MISE_FETCH_REMOTE_VERSIONS_CACHE": "0s"}
+    if github_token:
+        lookup_env["MISE_GITHUB_TOKEN"] = github_token
 
     def resolve(key: str) -> tuple[str, str | None]:
         request = "java@temurin-21" if key == "java" else key
@@ -132,16 +152,18 @@ def update_mise_pins(path: Path, *, update: bool) -> None:
             write_mise_version(path, key, latest)
 
 
-def latest_github_release(repository: str) -> str:
+def latest_github_release(repository: str, *, github_token: str | None) -> str:
     request = urllib.request.Request(
         f"https://api.github.com/repos/{repository}/releases/latest",
         headers={"User-Agent": "sakura-dev-tools"},
     )
+    if github_token:
+        request.add_unredirected_header("Authorization", f"Bearer {github_token}")
     with urllib.request.urlopen(request, timeout=30) as response:
         return json.load(response)["tag_name"].removeprefix("v")
 
 
-def update_image_pins(env_path: Path, *, update: bool) -> None:
+def update_image_pins(env_path: Path, *, update: bool, github_token: str | None = None) -> None:
     """Resolve tools installed by dedicated image stages from their upstreams."""
     with urllib.request.urlopen("https://crates.io/api/v1/crates/cargo-nextest", timeout=30) as response:
         nextest = json.load(response)["crate"]["max_stable_version"]
@@ -155,8 +177,8 @@ def update_image_pins(env_path: Path, *, update: bool) -> None:
     git = max(git_versions, key=lambda version: tuple(map(int, version.split("."))))
     with urllib.request.urlopen("https://static.rust-lang.org/dist/channel-rust-nightly.toml", timeout=30) as response:
         nightly = "nightly-" + tomllib.loads(response.read().decode())["date"]
-    values = {"MISE_VERSION": latest_github_release("jdx/mise"),
-              "DRAWIO_VERSION": latest_github_release("jgraph/drawio-desktop"),
+    values = {"MISE_VERSION": latest_github_release("jdx/mise", github_token=github_token),
+              "DRAWIO_VERSION": latest_github_release("jgraph/drawio-desktop", github_token=github_token),
               "NEXTEST_VERSION": nextest, "GIT_VERSION": git,
               "RUST_NIGHTLY_VERSION": nightly}
     current = read_env(env_path)

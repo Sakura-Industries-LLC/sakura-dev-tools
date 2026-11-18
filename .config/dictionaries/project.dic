@@ -76,9 +76,12 @@ libxtst
 libzstd
 licence
 licences
+lld
+llvm
 mise
 mktemp
 moonrepo
+msvc
 ndk
 netbase
 nextest
@@ -96,6 +99,7 @@ rumdl
 rvben
 sakura
 sdkmanager
+sdkroot
 shasums
 swiftshader
 temurin
@@ -116,5 +120,7 @@ wailsapp
 worktrunk
 xauth
 xvfb
+xwin
 zellij
+zigbuild
 zola

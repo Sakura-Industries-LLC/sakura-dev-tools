@@ -12,10 +12,12 @@ moon-setup:
     moon sync config-schemas
 
 # Check if anything is outdated
-outdated: (_container-mount "./tools/outdated.py")
+outdated:
+    ./tools/outdated.py
 
 # Check if any tools have updates and update to their latest versions
-outdated-update: (_container-mount "./tools/outdated.py --update")
+outdated-update:
+    ./tools/outdated.py --update
 
 # Build the container setup for the native platform, or all release platforms.
 build-setup *args:

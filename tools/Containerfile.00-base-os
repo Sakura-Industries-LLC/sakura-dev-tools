@@ -63,6 +63,8 @@ RUN set -eux; \
         libxrender1 \
         libxtst6 \
         libzstd-dev \
+        lld \
+        llvm \
         make \
         netbase \
         openssl \
@@ -82,6 +84,7 @@ RUN set -eux; \
         zlib1g-dev \
     ; \
     apt-get clean; \
+    ln -s /usr/bin/clang /usr/local/bin/clang-cl; \
     rm -rf /var/lib/apt/lists/*; \
     fc-cache -fv; \
     find / -type f -iname '*.log' -delete 2>/dev/null || true

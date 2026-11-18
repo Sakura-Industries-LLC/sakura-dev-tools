@@ -95,6 +95,20 @@ Gradle projects can continue to use their own Gradle wrapper.
 The Rust layer installs the exact `RUST_NIGHTLY_VERSION` from `.env` and exposes it through the existing `+nightly` name.
 The Git builder starts after that layer, in parallel with Go and Android.
 
+The pinned stable Rust toolchain includes these cross-compilation targets:
+
+* `x86_64-unknown-linux-musl`
+* `aarch64-unknown-linux-musl`
+* `x86_64-pc-windows-msvc`
+* `aarch64-apple-darwin`
+
+`cargo-zigbuild` and `cargo-xwin` are pinned in `mise.toml` and available on the static image `PATH`.
+Use `cargo zigbuild --target aarch64-unknown-linux-musl` for musl builds,
+or `cargo xwin build --target x86_64-pc-windows-msvc` for Windows MSVC builds.
+Zig, Clang, LLD, and LLVM are installed for these cross-compilers.
+`cargo xwin` downloads the Microsoft CRT and Windows SDK into its cache on first use. macOS builds
+that need Apple frameworks require a macOS SDK supplied through `SDKROOT`.
+
 The `linux/amd64` image also includes the Android command line tools, platform tools, SDK platform, build tools, NDK, emulator,
 and a Google APIs system image.
 Their pins live in `.env` and are resolved by `tools/outdated.py` from Google's stable package metadata.
@@ -151,11 +165,16 @@ The workflow registers the ARM64 binfmt handler before it builds the image.
 
 ## Updating pinned versions
 
+`just outdated` and `just outdated-update` run directly on the host; no container image is required.
+Install `uv`, `mise`, and Git on the host before running them.
+GitHub lookups use a token from the host environment or the active `gh` login for `github.com`.
+Without either, mise uses its usual credential sources.
+
 `tools/outdated.py` reads `mise.toml` and `.env`, including Android and dedicated build-stage pins.
 It uses `mise latest` for managed tools and upstream metadata for the remaining image pins.
 Managed tool lookups bypass mise's version caches and release age delay to include newly published releases.
 Java lookups are constrained to Temurin 21; the recorded version remains definite.
-Checking updates does not install or upgrade tools in the running container.
+Checking updates does not install or upgrade the managed tools.
 With `--update`, it rewrites the pin files in place.
 
 ## License
