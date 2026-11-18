@@ -153,6 +153,7 @@ The workflow registers the ARM64 binfmt handler before it builds the image.
 
 `tools/outdated.py` reads `mise.toml` and `.env`, including Android and dedicated build-stage pins.
 It uses `mise latest` for managed tools and upstream metadata for the remaining image pins.
+Managed tool lookups bypass mise's version caches and release age delay to include newly published releases.
 Java lookups are constrained to Temurin 21; the recorded version remains definite.
 Checking updates does not install or upgrade tools in the running container.
 With `--update`, it rewrites the pin files in place.

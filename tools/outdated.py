@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import tomllib
@@ -24,7 +25,14 @@ from pathlib import Path
 from rich.console import Console
 from rich.prompt import Confirm
 
-console = Console()
+console = Console(highlight=False)
+
+
+def print_version(key: str, current: str, latest: str) -> None:
+    """Keep unchanged pins neutral and highlight the entire update line."""
+    changed = current != latest
+    value = f"{current} -> {latest}" if changed else current
+    console.print(f"{key}: {value}", style="green" if changed else None, markup=False)
 
 
 def main() -> int:
@@ -79,11 +87,17 @@ def update_mise_pins(path: Path, *, update: bool) -> None:
     """Resolve latest versions without installing tools or creating a lockfile."""
     config = tomllib.loads(path.read_text())
     subprocess.run(["mise", "trust", str(path)], cwd=path.parent, check=True)
+    # Update checks need fresh upstream releases, not mise's cached snapshots.
+    lookup_env = {**os.environ, "MISE_USE_VERSIONS_HOST": "false",
+                  "MISE_FETCH_REMOTE_VERSIONS_CACHE": "0s"}
 
     def resolve(key: str) -> tuple[str, str | None]:
         request = "java@temurin-21" if key == "java" else key
-        result = subprocess.check_output(["mise", "latest", request], cwd=path.parent, text=True).strip()
-        # Mise can succeed without a version when all releases are too recent.
+        result = subprocess.check_output(
+            ["mise", "latest", request, "--minimum-release-age", "0s"],
+            cwd=path.parent, env=lookup_env, text=True,
+        ).strip()
+        # Mise can succeed without an eligible version.
         if not result:
             return key, None
         if not exact_version(result):
@@ -113,7 +127,7 @@ def update_mise_pins(path: Path, *, update: bool) -> None:
         if latest != current and not newer:
             console.print(f"{key}: retaining {current}; publisher latest is older ({latest})")
             continue
-        console.print(f"{key}: {current} -> {latest}")
+        print_version(key, current, latest)
         if update and newer:
             write_mise_version(path, key, latest)
 
@@ -147,7 +161,7 @@ def update_image_pins(env_path: Path, *, update: bool) -> None:
               "RUST_NIGHTLY_VERSION": nightly}
     current = read_env(env_path)
     for key, value in values.items():
-        console.print(f"{key}: {current.get(key, '<unset>')} -> {value}")
+        print_version(key, current.get(key, "<unset>"), value)
         if update and current.get(key) != value:
             write_env_value(env_path, key, value)
 
@@ -210,7 +224,7 @@ def update_android_pins(repo_root: Path, *, update: bool) -> None:
     current = read_env(env_path)
     for key, value in values.items():
         if current.get(key) != value:
-            console.print(f"[yellow]{key}:[/yellow] {current.get(key, '<unset>')} -> {value}")
+            print_version(key, current.get(key, "<unset>"), value)
             if update:
                 write_env_value(env_path, key, value)
 
@@ -444,8 +458,8 @@ def handle_latest_versions(
     with console.status(f"resolving debian:{latest_tag} digest ...", spinner="dots"):
         latest_pinned = f"{latest_tag}@{debian_manifest_digest(latest_tag)}"
 
-    console.print(f"Latest Debian: {current_debian}, {latest_pinned}")
-    console.print(f"Latest Gopls: {current_gopls}, {latest_gopls}")
+    print_version("Latest Debian", current_debian, latest_pinned)
+    print_version("Latest Gopls", current_gopls, latest_gopls)
 
     debian_changed = current_debian != latest_pinned
     gopls_changed = current_gopls != latest_gopls
@@ -461,14 +475,10 @@ def handle_latest_versions(
 
     if debian_changed:
         write_env_value(env_path, "DEBIAN_TAG", latest_pinned)
-        console.print(
-            f"[green]updated DEBIAN_TAG:[/green] {current_debian} -> {latest_pinned}"
-        )
+        print_version("updated DEBIAN_TAG", current_debian, latest_pinned)
     if gopls_changed:
         write_env_value(env_path, "GOPLS_VERSION", latest_gopls)
-        console.print(
-            f"[green]updated GOPLS_VERSION:[/green] {current_gopls} -> {latest_gopls}"
-        )
+        print_version("updated GOPLS_VERSION", current_gopls, latest_gopls)
 
 
 if __name__ == "__main__":
