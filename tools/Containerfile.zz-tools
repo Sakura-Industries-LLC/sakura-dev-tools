@@ -1,3 +1,21 @@
+FROM sakura-dev-tools:00-base-os AS proverif-builder
+
+ARG PROVERIF_VERSION
+ARG PROVERIF_SHA256
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ocaml; \
+    mkdir /tmp/proverif; \
+    cd /tmp/proverif; \
+    curl --fail --location --retry 3 \
+        "https://proverif.inria.fr/proverif${PROVERIF_VERSION}.tar.gz" --output source.tar.gz; \
+    printf '%s  %s\n' "$PROVERIF_SHA256" source.tar.gz | sha256sum --check; \
+    tar -xzf source.tar.gz --strip-components=1 --no-same-owner; \
+    ./build -nointeract native; \
+    install -Dm755 proverif /artifacts/bin/proverif; \
+    install -Dm644 LICENSE /artifacts/doc/LICENSE
+
 FROM sakura-dev-tools:06-git
 
 LABEL org.opencontainers.image.source="https://github.com/Sakura-Industries-LLC/sakura-dev-tools"
@@ -18,6 +36,8 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/* /tmp/drawio.deb
 
 COPY --chmod=755 tools/drawio.sh /usr/local/bin/drawio
+COPY --from=proverif-builder /artifacts/bin/proverif /usr/local/bin/proverif
+COPY --from=proverif-builder /artifacts/doc/LICENSE /usr/local/share/doc/proverif/LICENSE
 
 RUN mkdir /repo
 RUN env

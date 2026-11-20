@@ -165,6 +165,8 @@ The workflow registers the ARM64 binfmt handler before it builds the image.
 
 ## Updating pinned versions
 
+The image includes the `proverif` command, built from the release and SHA-256 checksum pinned in `.env`.
+
 `just outdated` and `just outdated-update` run directly on the host; no container image is required.
 Install `uv`, `mise`, and Git on the host before running them.
 GitHub lookups use a token from the host environment or the active `gh` login for `github.com`.

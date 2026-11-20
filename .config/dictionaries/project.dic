@@ -85,14 +85,17 @@ msvc
 ndk
 netbase
 nextest
+nointeract
 noninteractive
 noto
 numfmt
+opam
 opentofu
 pandoc
 pipefail
 poppler
 prototools
+proverif
 qemu
 roboto
 rumdl

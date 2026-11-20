@@ -163,6 +163,17 @@ def latest_github_release(repository: str, *, github_token: str | None) -> str:
         return json.load(response)["tag_name"].removeprefix("v")
 
 
+def latest_proverif_pins() -> dict[str, str]:
+    """Read the current ProVerif source archive version and checksum from opam."""
+    with urllib.request.urlopen("https://opam.ocaml.org/packages/proverif/", timeout=30) as response:
+        metadata = response.read().decode()
+    version = re.search(r'https://proverif\.inria\.fr/proverif([0-9]+\.[0-9]+(?:\.[0-9]+)*)\.tar\.gz', metadata)
+    checksum = re.search(r'\bsha256=([0-9a-f]{64})\b', metadata)
+    if not version or not checksum:
+        raise RuntimeError("Could not resolve the ProVerif source version and checksum from opam")
+    return {"PROVERIF_VERSION": version[1], "PROVERIF_SHA256": checksum[1]}
+
+
 def update_image_pins(env_path: Path, *, update: bool, github_token: str | None = None) -> None:
     """Resolve tools installed by dedicated image stages from their upstreams."""
     with urllib.request.urlopen("https://crates.io/api/v1/crates/cargo-nextest", timeout=30) as response:
@@ -180,7 +191,7 @@ def update_image_pins(env_path: Path, *, update: bool, github_token: str | None 
     values = {"MISE_VERSION": latest_github_release("jdx/mise", github_token=github_token),
               "DRAWIO_VERSION": latest_github_release("jgraph/drawio-desktop", github_token=github_token),
               "NEXTEST_VERSION": nextest, "GIT_VERSION": git,
-              "RUST_NIGHTLY_VERSION": nightly}
+              "RUST_NIGHTLY_VERSION": nightly, **latest_proverif_pins()}
     current = read_env(env_path)
     for key, value in values.items():
         print_version(key, current.get(key, "<unset>"), value)

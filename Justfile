@@ -113,7 +113,7 @@ _build-setup:
     podman_build -f tools/Containerfile.06-git \
         -t sakura-dev-tools:06-git .
     podman_build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest-all \
-        --build-arg DRAWIO_VERSION .
+        --build-arg DRAWIO_VERSION --build-arg PROVERIF_VERSION --build-arg PROVERIF_SHA256 .
     # Flatten the completed image without rerunning installation or losing metadata.
     printf 'FROM sakura-dev-tools:latest-all\n' | \
         podman_build --pull=never --squash-all -f - -t sakura-dev-tools:latest .
