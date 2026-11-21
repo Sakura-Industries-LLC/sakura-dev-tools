@@ -97,7 +97,6 @@ _build-setup:
     podman_build -f tools/Containerfile.05-pdf2htmlex \
         -t sakura-dev-tools:05-pdf2htmlex .
 
-    # The Git builder and runtime layers are disabled while mise supplies Git.
     podman_build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest-all \
         --build-arg DRAWIO_VERSION --build-arg PROVERIF_VERSION --build-arg PROVERIF_SHA256 .
     # Flatten the completed image without rerunning installation or losing metadata.

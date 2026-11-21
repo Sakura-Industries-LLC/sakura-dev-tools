@@ -14,13 +14,11 @@ Everything that ends up inside the final image lives under `tools/`; everything 
 * `tools/Containerfile.01-mise` - installs the pinned mise release and every tool pinned in `mise.toml`.
 * `tools/Containerfile.01a-pdf2htmlex-builder` - builds the pdf2htmlEX runtime artifacts from the base OS.
 * `tools/Containerfile.02-rust` - adds a nightly Rust toolchain for `rustfmt`.
-* `tools/Containerfile.02a-git-builder` - retained Git source build, currently disabled.
 * `tools/Containerfile.03-go` - Go tooling layer:
   copies `go/check_go_licenses.py` into `/root/go` so it is on `PATH` for downstream Go projects.
   `gopls` and `cyclonedx-gomod` are installed at the mise layer via `mise.toml`.
 * `tools/Containerfile.04-android` - installs the Android SDK, NDK, emulator, and phone/tablet virtual devices on AMD64.
 * `tools/Containerfile.05-pdf2htmlex` - copies the pdf2htmlEX runtime artifacts without build dependencies.
-* `tools/Containerfile.06-git` - retained Git runtime layer for the source build, currently disabled.
 * `tools/Containerfile.zz-tools` - the final layered `sakura-dev-tools:latest-all` image, with `/repo` as the working directory.
 * `tools/outdated.py` - reports which pinned versions in `.env` and `mise.toml` have newer upstream releases;
   supports `--update` to refresh them.
@@ -40,11 +38,9 @@ Each layer names a stage in a fixed order, and the final `zz-tools` image is wha
 | `01-`  | `mise` toolchain manager and everything pinned in `mise.toml`.                     |
 | `01a-` | Disposable pdf2htmlEX builder layer.                                                |
 | `02-`  | Dated nightly Rust toolchain.                                                        |
-| `02a-` | Disposable Git builder layer (disabled).                                             |
 | `03-`  | Go tooling layer: ships `check_go_licenses.py`.                                       |
 | `04-`  | Android SDK, NDK, and emulator layer (AMD64).                                         |
 | `05-`  | pdf2htmlEX runtime layer.                                                           |
-| `06-`  | Git runtime layer (disabled).                                                        |
 | `zz-`  | Final aggregated image, with `/repo` prepared for downstream mounts.                  |
 
 `just build-setup` starts the pdf2htmlEX builder after the base OS, in parallel with the main toolchain layers.
