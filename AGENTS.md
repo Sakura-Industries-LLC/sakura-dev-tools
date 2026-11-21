@@ -23,7 +23,7 @@ The image is built in named stages with a numeric prefix that controls build ord
 
 * `00-` - OS / native build dependencies (Debian).
 * `01-` - `mise` toolchain manager and every pin in `mise.toml`.
-* `02-` - dedicated Rust nightly and cargo-nextest layer.
+* `02-` - dedicated Rust nightly layer.
 * `zz-` - the final aggregated image; this is what downstream projects mount.
 
 `just build-setup` walks the layers in lexicographic order.
@@ -34,7 +34,7 @@ Each Containerfile should `FROM` the previous stage so the build cache is shared
 
 Two files hold the pin set, and they are the single source of truth.
 
-* `.env` - `DEBIAN_TAG`, `MISE_VERSION`, `RUST_NIGHTLY_VERSION`, `NEXTEST_VERSION`, and `GIT_VERSION`
+* `.env` - image and dedicated layer pins, including `DEBIAN_TAG`, `MISE_VERSION`, and `RUST_NIGHTLY_VERSION`
   (consumed by `just build-setup` as `--build-arg`).
 * `mise.toml` - every tool installed by mise, using exact release versions.
 * Tools run from a static image `PATH` through filesystem links; do not add mise shims or shell activation.

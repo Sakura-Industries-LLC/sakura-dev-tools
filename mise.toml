@@ -1,10 +1,11 @@
 # Exact tool versions for the container. Refresh with just outdated-update.
 [tools]
-"java" = "temurin-21.0.13+100000002.0.LTS"
+"java" = "temurin-21.0.13+9.0.LTS"
 "aqua:gradle/gradle-distributions" = "9.9.2"
 "aqua:casey/just" = "1.59.0"
 "github:moonrepo/moon" = { version = "2.6.5", matching = "moon_cli-", rename_exe = "moon" }
-"github:git-lfs/git-lfs" = { version = "3.8.1", strip_components = 1, bin_path = ".", matching = "linux-", filter_bins = "git-lfs" }
+"conda:git" = { version = "2.56.1", channel = "conda-forge" }
+"conda:git-lfs" = { version = "3.8.1", channel = "conda-forge" }
 # Kizz's tracer supports only Linux x86_64.
 "github:Sakura-Industries-LLC/kizz" = { version = "0.0.2", os = ["linux/x64"], strip_components = 1, bin_path = ".", filter_bins = "kizz" }
 "github:Sakura-Industries-LLC/CBORK" = { version = "0.0.20", strip_components = 1, bin_path = ".", filter_bins = "cbork" }
@@ -12,9 +13,11 @@
 "node" = "26.13.1"
 "npm:npm" = "12.2.3"
 "rust" = { version = "1.100.0", profile = "default", targets = ["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl", "x86_64-pc-windows-msvc", "aarch64-apple-darwin"] }
+"aqua:nextest-rs/nextest/cargo-nextest" = "0.9.152"
 "cargo:cargo-zigbuild" = "0.24.1"
 "cargo:cargo-xwin" = "0.23.1"
 "go" = "1.27.4"
+"go:golang.org/x/tools/gopls" = "0.24.0"
 "aqua:golangci/golangci-lint" = "2.15.0"
 "aqua:vektra/mockery" = "3.9.1"
 "github:CycloneDX/cyclonedx-gomod" = "1.12.0"

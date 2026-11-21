@@ -7,6 +7,7 @@ binfmt
 binstall
 cbork
 cmdline
+conda
 containerfile
 cyclonedx
 dotenv
@@ -31,6 +32,7 @@ goroot
 gradle
 groff
 gsize
+hotspot
 htmlex
 ifdef
 javac

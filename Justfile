@@ -66,16 +66,11 @@ _build-setup:
         --build-arg DEBIAN_TAG .
 
     pdf2htmlex_builder_pid=
-    git_builder_pid=
     cleanup() {
         status=$?
         if [[ -n "${pdf2htmlex_builder_pid}" ]]; then
             kill "${pdf2htmlex_builder_pid}" 2>/dev/null || true
             wait "${pdf2htmlex_builder_pid}" 2>/dev/null || true
-        fi
-        if [[ -n "${git_builder_pid}" ]]; then
-            kill "${git_builder_pid}" 2>/dev/null || true
-            wait "${git_builder_pid}" 2>/dev/null || true
         fi
         exit "${status}"
     }
@@ -89,14 +84,9 @@ _build-setup:
     podman_build -f tools/Containerfile.01-mise -t sakura-dev-tools:01-mise \
         --build-arg MISE_VERSION .
     podman_build -f tools/Containerfile.02-rust -t sakura-dev-tools:02-rust \
-        --build-arg NEXTEST_VERSION --build-arg RUST_NIGHTLY_VERSION .
-    podman_build -f tools/Containerfile.02a-git-builder \
-        -t sakura-dev-tools:02a-git-builder \
-        --build-arg GIT_VERSION . &
-    git_builder_pid=$!
+        --build-arg RUST_NIGHTLY_VERSION .
 
-    podman_build -f tools/Containerfile.03-go -t sakura-dev-tools:03-go \
-        --build-arg GOPLS_VERSION .
+    podman_build -f tools/Containerfile.03-go -t sakura-dev-tools:03-go .
 
     podman_build -f tools/Containerfile.04-android \
         -t sakura-dev-tools:04-android .
@@ -107,11 +97,7 @@ _build-setup:
     podman_build -f tools/Containerfile.05-pdf2htmlex \
         -t sakura-dev-tools:05-pdf2htmlex .
 
-    wait "${git_builder_pid}"
-    git_builder_pid=
-
-    podman_build -f tools/Containerfile.06-git \
-        -t sakura-dev-tools:06-git .
+    # The Git builder and runtime layers are disabled while mise supplies Git.
     podman_build -f tools/Containerfile.zz-tools -t sakura-dev-tools:latest-all \
         --build-arg DRAWIO_VERSION --build-arg PROVERIF_VERSION --build-arg PROVERIF_SHA256 .
     # Flatten the completed image without rerunning installation or losing metadata.

@@ -16,7 +16,7 @@ RUN set -eux; \
     install -Dm755 proverif /artifacts/bin/proverif; \
     install -Dm644 LICENSE /artifacts/doc/LICENSE
 
-FROM sakura-dev-tools:06-git
+FROM sakura-dev-tools:05-pdf2htmlex
 
 LABEL org.opencontainers.image.source="https://github.com/Sakura-Industries-LLC/sakura-dev-tools"
 

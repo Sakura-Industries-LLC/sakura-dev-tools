@@ -54,12 +54,10 @@ def main() -> int:
         update_image_pins(env_path, update=args.update, github_token=github_token)
         env_values = read_env(env_path)
         secrets = read_env(secrets_path) if secrets_path.exists() else {}
-        latest_gopls = latest_go_module_version("golang.org/x/tools/gopls")
         latest_debian = latest_debian_slim_tag(env_values["DEBIAN_TAG"], secrets=secrets)
-        handle_latest_versions(
+        handle_latest_debian(
             env_path=env_path,
             current_debian=env_values["DEBIAN_TAG"], latest_debian=latest_debian,
-            current_gopls=env_values["GOPLS_VERSION"], latest_gopls=latest_gopls,
             update=args.update,
         )
     except (RuntimeError, urllib.error.URLError, subprocess.CalledProcessError) as error:
@@ -143,24 +141,56 @@ def update_mise_pins(path: Path, *, update: bool, github_token: str | None = Non
             console.print(f"{key}: retaining {current}; no eligible release (check minimum_release_age or skipped releases)")
             continue
         # A publisher may mark an older maintenance release as its latest.
-        newer = tuple(map(int, re.findall(r"\d+", latest))) > tuple(map(int, re.findall(r"\d+", current)))
+        newer = version_order(key, latest) > version_order(key, current)
         if latest != current and not newer:
             console.print(f"{key}: retaining {current}; publisher latest is older ({latest})")
+            continue
+        if key == "java" and newer and not temurin_linux_assets_available(latest, github_token=github_token):
+            console.print(f"{key}: retaining {current}; {latest} lacks published Linux x64 or ARM64 JDK assets")
             continue
         print_version(key, current, latest)
         if update and newer:
             write_mise_version(path, key, latest)
 
 
-def latest_github_release(repository: str, *, github_token: str | None) -> str:
+def version_order(key: str, version: str) -> tuple[tuple[int, ...], ...]:
+    # Compare the Java release before the build number, including four-part releases.
+    parts = version.split("+", 1) if key == "java" else [version]
+    return tuple(tuple(map(int, re.findall(r"\d+", part))) for part in parts)
+
+
+def github_release(repository: str, release: str, *, github_token: str | None) -> dict:
     request = urllib.request.Request(
-        f"https://api.github.com/repos/{repository}/releases/latest",
+        f"https://api.github.com/repos/{repository}/releases/{release}",
         headers={"User-Agent": "sakura-dev-tools"},
     )
     if github_token:
         request.add_unredirected_header("Authorization", f"Bearer {github_token}")
     with urllib.request.urlopen(request, timeout=30) as response:
-        return json.load(response)["tag_name"].removeprefix("v")
+        return json.load(response)
+
+
+def latest_github_release(repository: str, *, github_token: str | None) -> str:
+    return github_release(repository, "latest", github_token=github_token)["tag_name"].removeprefix("v")
+
+
+def temurin_linux_assets_available(version: str, *, github_token: str | None) -> bool:
+    # Mise appends .0.LTS to the build number in its Temurin pins.
+    match = re.fullmatch(r"temurin-(21(?:\.\d+){2,3})\+(\d+)\.0\.LTS", version)
+    if not match:
+        return False
+    release, build = match.groups()
+    try:
+        metadata = github_release(
+            "adoptium/temurin21-binaries", f"tags/jdk-{release}%2B{build}", github_token=github_token,
+        )
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            return False
+        raise
+    assets = {asset["name"] for asset in metadata["assets"] if asset["state"] == "uploaded"}
+    return all(f"OpenJDK21U-jdk_{arch}_linux_hotspot_{release}_{build}.tar.gz" in assets
+               for arch in ("x64", "aarch64"))
 
 
 def latest_proverif_pins() -> dict[str, str]:
@@ -176,21 +206,10 @@ def latest_proverif_pins() -> dict[str, str]:
 
 def update_image_pins(env_path: Path, *, update: bool, github_token: str | None = None) -> None:
     """Resolve tools installed by dedicated image stages from their upstreams."""
-    with urllib.request.urlopen("https://crates.io/api/v1/crates/cargo-nextest", timeout=30) as response:
-        nextest = json.load(response)["crate"]["max_stable_version"]
-    # Git has numbered tags but does not publish GitHub release objects.
-    tags = subprocess.check_output(
-        ["git", "ls-remote", "--tags", "--refs", "https://github.com/git/git.git"], text=True,
-    )
-    git_versions = re.findall(r"refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$", tags, re.MULTILINE)
-    if not git_versions:
-        raise RuntimeError("No stable Git tags found")
-    git = max(git_versions, key=lambda version: tuple(map(int, version.split("."))))
     with urllib.request.urlopen("https://static.rust-lang.org/dist/channel-rust-nightly.toml", timeout=30) as response:
         nightly = "nightly-" + tomllib.loads(response.read().decode())["date"]
     values = {"MISE_VERSION": latest_github_release("jdx/mise", github_token=github_token),
               "DRAWIO_VERSION": latest_github_release("jgraph/drawio-desktop", github_token=github_token),
-              "NEXTEST_VERSION": nextest, "GIT_VERSION": git,
               "RUST_NIGHTLY_VERSION": nightly, **latest_proverif_pins()}
     current = read_env(env_path)
     for key, value in values.items():
@@ -290,18 +309,6 @@ def write_env_value(path: Path, key: str, value: str) -> None:
         output.append(f"{key}={value}")
 
     path.write_text("\n".join(output) + "\n")
-
-
-def latest_go_module_version(module: str) -> str:
-    """Resolve the latest tagged version of a Go module."""
-    url = f"https://proxy.golang.org/{module}/@latest"
-    with urllib.request.urlopen(url, timeout=30) as response:
-        payload = json.load(response)
-
-    version = payload.get("Version", "")
-    if not version.startswith("v"):
-        raise RuntimeError(f"invalid version returned for {module!r}: {version!r}")
-    return version.removeprefix("v")
 
 
 @dataclass(frozen=True, order=True)
@@ -476,42 +483,29 @@ def debian_manifest_digest(tag: str) -> str:
     return digest
 
 
-def handle_latest_versions(
+def handle_latest_debian(
     *,
     env_path: Path,
     current_debian: str,
     latest_debian: DebianSlimTag,
-    current_gopls: str,
-    latest_gopls: str,
     update: bool,
 ) -> None:
-    """Report and optionally update the latest Debian and gopls versions."""
+    """Report and optionally update the Debian pin."""
     latest_tag = latest_debian.tag
 
     with console.status(f"resolving debian:{latest_tag} digest ...", spinner="dots"):
         latest_pinned = f"{latest_tag}@{debian_manifest_digest(latest_tag)}"
 
     print_version("Latest Debian", current_debian, latest_pinned)
-    print_version("Latest Gopls", current_gopls, latest_gopls)
-
-    debian_changed = current_debian != latest_pinned
-    gopls_changed = current_gopls != latest_gopls
-    if not debian_changed and not gopls_changed:
+    if current_debian == latest_pinned:
         console.print("[green]All latest versions are selected.[/green]")
         return
 
-    if not update:
+    if not update or not Confirm.ask("Update to Latest", default=False):
         return
 
-    if not Confirm.ask("Update to Latest", default=False):
-        return
-
-    if debian_changed:
-        write_env_value(env_path, "DEBIAN_TAG", latest_pinned)
-        print_version("updated DEBIAN_TAG", current_debian, latest_pinned)
-    if gopls_changed:
-        write_env_value(env_path, "GOPLS_VERSION", latest_gopls)
-        print_version("updated GOPLS_VERSION", current_gopls, latest_gopls)
+    write_env_value(env_path, "DEBIAN_TAG", latest_pinned)
+    print_version("updated DEBIAN_TAG", current_debian, latest_pinned)
 
 
 if __name__ == "__main__":
